@@ -1,7 +1,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { generateUniquePuzzle } from '@/ai/flows/generate-unique-puzzle';
 import { SudokuBoard } from '@/components/puzzle/SudokuBoard';
 import { SlidingBoard } from '@/components/puzzle/SlidingBoard';
@@ -10,11 +10,25 @@ import { HintMentor } from '@/components/puzzle/HintMentor';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Brain, Grid3X3, Layers, LayoutGrid, Timer, Trophy, ArrowLeft, Plus } from 'lucide-react';
+import { 
+  Brain, 
+  Grid3X3, 
+  Layers, 
+  LayoutGrid, 
+  Timer, 
+  Trophy, 
+  ArrowLeft, 
+  Plus, 
+  LogOut, 
+  RotateCcw,
+  CheckCircle2,
+  PlayCircle
+} from 'lucide-react';
 import { GameSession, saveSession, getAllSessions, deleteSession } from '@/lib/game-utils';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
+import { toast } from '@/hooks/use-toast';
 
 type View = 'hub' | 'play' | 'analytics';
 
@@ -23,6 +37,8 @@ export default function EnigmaNexus() {
   const [activeSession, setActiveSession] = useState<GameSession | null>(null);
   const [sessions, setSessions] = useState<GameSession[]>([]);
   const [loading, setLoading] = useState(false);
+  const [elapsedSeconds, setElapsedSeconds] = useState(0);
+  const timerRef = useRef<NodeJS.Timeout | null>(null);
   
   // Generator Config
   const [pType, setPType] = useState<string>('Sudoku');
@@ -31,6 +47,27 @@ export default function EnigmaNexus() {
   useEffect(() => {
     setSessions(getAllSessions());
   }, []);
+
+  // Timer logic
+  useEffect(() => {
+    if (view === 'play' && activeSession && !activeSession.isCompleted) {
+      timerRef.current = setInterval(() => {
+        setElapsedSeconds(prev => prev + 1);
+      }, 1000);
+    } else {
+      if (timerRef.current) clearInterval(timerRef.current);
+    }
+    return () => {
+      if (timerRef.current) clearInterval(timerRef.current);
+    };
+  }, [view, activeSession]);
+
+  const formatTime = (seconds: number) => {
+    const h = Math.floor(seconds / 3600);
+    const m = Math.floor((seconds % 3600) / 60);
+    const s = seconds % 60;
+    return [h, m, s].map(v => v < 10 ? "0" + v : v).join(":");
+  };
 
   const startNewGame = async () => {
     setLoading(true);
@@ -46,13 +83,20 @@ export default function EnigmaNexus() {
         moves: 0,
         startTime: Date.now(),
         lastPlayed: Date.now(),
+        timeSpent: 0,
+        isCompleted: false
       };
       saveSession(newSession);
       setActiveSession(newSession);
+      setElapsedSeconds(0);
       setSessions(getAllSessions());
       setView('play');
     } catch (err) {
-      console.error(err);
+      toast({
+        variant: "destructive",
+        title: "Matrix Generation Failed",
+        description: "The AI weaver encountered a logical knot. Please try again."
+      });
     } finally {
       setLoading(false);
     }
@@ -60,14 +104,49 @@ export default function EnigmaNexus() {
 
   const resumeGame = (session: GameSession) => {
     setActiveSession(session);
+    setElapsedSeconds(session.timeSpent || 0);
     setView('play');
   };
 
-  const handleUpdate = (progress: string) => {
+  const handleUpdate = (progress: string, moveIncrement = 1) => {
     if (!activeSession) return;
-    const updated = { ...activeSession, userProgress: progress, lastPlayed: Date.now() };
+    
+    const isNowCompleted = progress === activeSession.solution;
+    
+    const updated: GameSession = { 
+      ...activeSession, 
+      userProgress: progress, 
+      lastPlayed: Date.now(),
+      moves: activeSession.moves + moveIncrement,
+      timeSpent: elapsedSeconds,
+      isCompleted: isNowCompleted || activeSession.isCompleted
+    };
+    
     setActiveSession(updated);
     saveSession(updated);
+
+    if (isNowCompleted && !activeSession.isCompleted) {
+      toast({
+        title: "Logic Pattern Synchronized!",
+        description: `Puzzle completed in ${formatTime(elapsedSeconds)} with ${updated.moves} moves.`,
+      });
+    }
+  };
+
+  const resetPuzzle = () => {
+    if (!activeSession) return;
+    const updated = { ...activeSession, userProgress: activeSession.data, moves: 0, timeSpent: 0, isCompleted: false };
+    setActiveSession(updated);
+    setElapsedSeconds(0);
+    saveSession(updated);
+  };
+
+  const exitToHub = () => {
+    if (activeSession) {
+      saveSession({ ...activeSession, timeSpent: elapsedSeconds });
+    }
+    setSessions(getAllSessions());
+    setView('hub');
   };
 
   const hubPuzzles = [
@@ -91,7 +170,7 @@ export default function EnigmaNexus() {
           </div>
           <div className="flex gap-4">
             <Button variant="outline" onClick={() => setView('analytics')} className="gap-2 border-primary/20 hover:bg-primary/10">
-              <Trophy className="size-4 text-accent" /> Success Metrics
+              <Trophy className="size-4 text-accent" /> Achievement Data
             </Button>
           </div>
         </header>
@@ -107,7 +186,7 @@ export default function EnigmaNexus() {
                   key={p.id} 
                   className={cn(
                     "group relative overflow-hidden border-primary/10 transition-all hover:border-primary/40 hover:shadow-2xl hover:shadow-primary/5 cursor-pointer",
-                    pType === p.id ? "ring-2 ring-primary bg-primary/5" : "bg-card/50"
+                    pType === p.id ? "ring-2 ring-primary bg-primary/5 shadow-lg" : "bg-card/50"
                   )}
                   onClick={() => setPType(p.id)}
                 >
@@ -125,7 +204,7 @@ export default function EnigmaNexus() {
                   </div>
                   <CardHeader className="relative -mt-10">
                     <div className={cn(
-                      "size-12 rounded-xl flex items-center justify-center mb-2 transition-transform group-hover:scale-110",
+                      "size-12 rounded-xl flex items-center justify-center mb-2 transition-transform group-hover:scale-110 shadow-lg",
                       pType === p.id ? "bg-primary text-white" : "bg-secondary text-primary"
                     )}>
                       <p.icon className="size-6" />
@@ -137,10 +216,10 @@ export default function EnigmaNexus() {
               ))}
             </div>
 
-            <div className="mt-8 flex flex-col sm:flex-row items-center gap-4 bg-muted/30 p-6 rounded-2xl border border-primary/10">
+            <div className="mt-8 flex flex-col sm:flex-row items-center gap-4 bg-muted/30 p-6 rounded-2xl border border-primary/10 backdrop-blur-sm">
               <div className="flex-1 space-y-1">
-                <p className="font-medium text-lg">Target Complexity</p>
-                <p className="text-sm text-muted-foreground">Adjust the AI Weaver's logical parameters.</p>
+                <p className="font-medium text-lg">Logical Difficulty</p>
+                <p className="text-sm text-muted-foreground">Adjust the AI Weaver's complexity parameters.</p>
               </div>
               <Select value={pDiff} onValueChange={setPDiff}>
                 <SelectTrigger className="w-full sm:w-48 bg-card border-primary/20">
@@ -156,7 +235,7 @@ export default function EnigmaNexus() {
               <Button 
                 onClick={startNewGame} 
                 disabled={loading}
-                className="w-full sm:w-auto h-12 px-10 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-lg neon-glow"
+                className="w-full sm:w-auto h-12 px-10 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-lg neon-glow transition-all active:scale-95"
               >
                 {loading ? "Woven Logic..." : "CONSTRUCT MATRIX"}
               </Button>
@@ -175,12 +254,15 @@ export default function EnigmaNexus() {
                     className="flex items-center justify-between p-4 bg-card border border-primary/5 rounded-xl hover:bg-muted/50 transition-colors group"
                   >
                     <div className="flex items-center gap-4 cursor-pointer flex-1" onClick={() => resumeGame(s)}>
-                      <div className="size-10 rounded-lg bg-secondary flex items-center justify-center text-primary font-bold">
-                        {s.type[0]}
+                      <div className={cn(
+                        "size-10 rounded-lg flex items-center justify-center font-bold",
+                        s.isCompleted ? "bg-accent/20 text-accent" : "bg-secondary text-primary"
+                      )}>
+                        {s.isCompleted ? <CheckCircle2 className="size-5" /> : <PlayCircle className="size-5" />}
                       </div>
-                      <div>
-                        <p className="font-medium">{s.type}</p>
-                        <p className="text-xs text-muted-foreground">{s.difficulty} • {new Date(s.lastPlayed).toLocaleDateString()}</p>
+                      <div className="min-w-0">
+                        <p className="font-medium truncate">{s.type}</p>
+                        <p className="text-xs text-muted-foreground">{s.difficulty} • {s.moves} moves</p>
                       </div>
                     </div>
                     <Button 
@@ -207,25 +289,25 @@ export default function EnigmaNexus() {
 
   if (view === 'analytics') {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-8">
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-8">
         <div className="max-w-4xl w-full">
-           <Button variant="ghost" className="mb-8 gap-2 text-muted-foreground" onClick={() => setView('hub')}>
+           <Button variant="ghost" className="mb-8 gap-2 text-muted-foreground hover:text-primary" onClick={() => setView('hub')}>
               <ArrowLeft className="size-4" /> Return to Hub
            </Button>
            <h1 className="text-4xl font-headline font-bold mb-4">Cognitive Evolution</h1>
-           <p className="text-muted-foreground mb-12">Performance metrics across session history.</p>
+           <p className="text-muted-foreground mb-12">Performance metrics across your session history.</p>
            
            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-             <Card className="bg-card/50 border-primary/20">
+             <Card className="bg-card/50 border-primary/20 backdrop-blur-md">
                <CardHeader><CardTitle>Total Solving Time</CardTitle></CardHeader>
-               <CardContent className="h-64 flex items-center justify-center text-muted-foreground italic">
-                 Visualizer initializing...
+               <CardContent className="h-64 flex items-center justify-center text-muted-foreground italic border-t border-primary/5">
+                 Metrics calculation in progress...
                </CardContent>
              </Card>
-             <Card className="bg-card/50 border-primary/20">
+             <Card className="bg-card/50 border-primary/20 backdrop-blur-md">
                <CardHeader><CardTitle>Move Efficiency</CardTitle></CardHeader>
-               <CardContent className="h-64 flex items-center justify-center text-muted-foreground italic">
-                 Visualizer initializing...
+               <CardContent className="h-64 flex items-center justify-center text-muted-foreground italic border-t border-primary/5">
+                 Heuristics loading...
                </CardContent>
              </Card>
            </div>
@@ -236,26 +318,55 @@ export default function EnigmaNexus() {
 
   return (
     <div className="min-h-screen bg-background text-foreground flex flex-col">
-      <nav className="p-4 sm:p-6 border-b border-primary/5 flex items-center justify-between">
+      <nav className="p-4 sm:p-6 border-b border-primary/5 flex items-center justify-between backdrop-blur-sm sticky top-0 z-40 bg-background/80">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => setView('hub')}>
-            <ArrowLeft className="size-5" />
+          <Button variant="ghost" size="icon" onClick={exitToHub} className="hover:bg-destructive/10 hover:text-destructive">
+            <LogOut className="size-5" />
           </Button>
-          <div>
+          <div className="hidden sm:block">
             <h2 className="text-lg font-headline font-bold text-primary">{activeSession?.type}</h2>
-            <p className="text-xs text-muted-foreground uppercase tracking-wider">{activeSession?.difficulty} Difficulty</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider">{activeSession?.difficulty} Complexity</p>
           </div>
         </div>
-        <div className="flex gap-4">
-          <div className="hidden sm:flex items-center gap-2 bg-muted px-4 py-2 rounded-lg text-sm font-medium">
-            <Timer className="size-4 text-primary" />
-            00:00:00
+
+        <div className="flex items-center gap-3 sm:gap-6">
+          <div className="flex flex-col items-end">
+             <div className="flex items-center gap-2 text-accent font-mono font-bold">
+               <Timer className="size-4" />
+               {formatTime(elapsedSeconds)}
+             </div>
+             <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Elapsed</p>
           </div>
+          
+          <div className="h-8 w-px bg-primary/10" />
+
+          <div className="flex flex-col items-end">
+             <div className="text-primary font-mono font-bold">
+               {activeSession?.moves || 0}
+             </div>
+             <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Moves</p>
+          </div>
+
+          <Button variant="outline" size="icon" onClick={resetPuzzle} className="ml-2 border-primary/10 hover:bg-primary/5">
+            <RotateCcw className="size-4" />
+          </Button>
         </div>
       </nav>
 
       <main className="flex-1 flex flex-col items-center justify-center p-4">
-        <div className="w-full max-w-2xl bg-card/40 border border-primary/10 rounded-3xl p-6 sm:p-12 shadow-2xl backdrop-blur-sm">
+        {activeSession?.isCompleted && (
+          <div className="mb-8 text-center animate-in fade-in zoom-in duration-500">
+             <div className="inline-flex items-center gap-2 bg-accent/20 text-accent px-6 py-2 rounded-full border border-accent/30 font-bold mb-2">
+               <CheckCircle2 className="size-5" /> Logic Synchronized
+             </div>
+             <p className="text-muted-foreground">Pattern fully solved. You may continue to refine or exit.</p>
+          </div>
+        )}
+
+        <div className={cn(
+          "w-full max-w-2xl bg-card/40 border border-primary/10 rounded-3xl p-6 sm:p-12 shadow-2xl backdrop-blur-sm transition-all duration-500",
+          activeSession?.isCompleted && "border-accent/40 shadow-accent/5"
+        )}>
           {activeSession?.type === 'Sudoku' && (
             <SudokuBoard 
               initialData={activeSession.data} 
@@ -278,7 +389,7 @@ export default function EnigmaNexus() {
         </div>
       </main>
 
-      {activeSession && (
+      {activeSession && !activeSession.isCompleted && (
         <HintMentor 
           puzzleType={activeSession.type} 
           difficulty={activeSession.difficulty} 

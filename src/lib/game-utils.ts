@@ -9,9 +9,11 @@ export interface GameSession {
   moves: number;
   startTime: number;
   lastPlayed: number;
+  isCompleted?: boolean;
+  timeSpent?: number; // in seconds
 }
 
-export const STORAGE_KEY = 'enigma-nexus-sessions';
+export const STORAGE_KEY = 'enigma-nexus-sessions-v2';
 
 export function saveSession(session: GameSession) {
   if (typeof window === 'undefined') return;

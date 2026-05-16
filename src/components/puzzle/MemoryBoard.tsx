@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 
 interface MemoryBoardProps {
   initialData: string;
-  onUpdate: (progress: string) => void;
+  onUpdate: (progress: string, moves?: number) => void;
 }
 
 export function MemoryBoard({ initialData, onUpdate }: MemoryBoardProps) {
@@ -30,9 +30,17 @@ export function MemoryBoard({ initialData, onUpdate }: MemoryBoardProps) {
         const newSolved = [...solved, first, second];
         setSolved(newSolved);
         setFlipped([]);
-        onUpdate(newSolved.join(','));
+        // Memory puzzle is "solved" when all indices are in solved array
+        // We report completion by returning the original initialData as progress 
+        // if solved.length matches items.length
+        if (newSolved.length === items.length) {
+          onUpdate(initialData, 1);
+        } else {
+          onUpdate(newSolved.join(','), 1);
+        }
       } else {
-        setTimeout(() => setFlipped([]), 1000);
+        setTimeout(() => setFlipped([]), 800);
+        onUpdate(solved.join(','), 1);
       }
     }
   };
@@ -41,19 +49,29 @@ export function MemoryBoard({ initialData, onUpdate }: MemoryBoardProps) {
     <div className="grid grid-cols-4 gap-4 w-full max-w-md mx-auto aspect-square">
       {items.map((item, i) => {
         const isFlipped = flipped.includes(i) || solved.includes(i);
+        const isMatched = solved.includes(i);
+        
         return (
           <div
             key={i}
             onClick={() => handleClick(i)}
             className={cn(
-              "relative w-full h-full cursor-pointer perspective-1000 transform transition-all duration-500",
+              "relative w-full h-full cursor-pointer transition-all duration-500 [transform-style:preserve-3d]",
               isFlipped ? "[transform:rotateY(180deg)]" : ""
             )}
           >
-            <div className="absolute inset-0 bg-secondary rounded-xl border border-primary/20 flex items-center justify-center text-primary/50 text-2xl font-bold backface-hidden">
+            {/* Front */}
+            <div className={cn(
+              "absolute inset-0 bg-secondary rounded-xl border border-primary/20 flex items-center justify-center text-primary/30 text-2xl font-bold [backface-visibility:hidden] hover:border-primary/50",
+              isMatched && "opacity-50"
+            )}>
               ?
             </div>
-            <div className="absolute inset-0 bg-primary/20 border-2 border-primary rounded-xl flex items-center justify-center text-3xl [transform:rotateY(180deg)] backface-hidden">
+            {/* Back */}
+            <div className={cn(
+              "absolute inset-0 bg-primary/10 border-2 border-primary rounded-xl flex items-center justify-center text-3xl [backface-visibility:hidden] [transform:rotateY(180deg)]",
+              isMatched && "border-accent bg-accent/10 text-accent"
+            )}>
               {item}
             </div>
           </div>
