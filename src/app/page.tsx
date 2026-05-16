@@ -22,9 +22,12 @@ import {
   LogOut, 
   RotateCcw,
   CheckCircle2,
-  PlayCircle
+  PlayCircle,
+  Zap,
+  Star,
+  Sparkles
 } from 'lucide-react';
-import { GameSession, saveSession, getAllSessions, deleteSession } from '@/lib/game-utils';
+import { GameSession, saveSession, getAllSessions, deleteSession, getUserStats, addReward, calculateReward, UserStats } from '@/lib/game-utils';
 import { cn } from '@/lib/utils';
 import Image from 'next/image';
 import { PlaceHolderImages } from '@/lib/placeholder-images';
@@ -36,17 +39,20 @@ export default function EnigmaNexus() {
   const [view, setView] = useState<View>('hub');
   const [activeSession, setActiveSession] = useState<GameSession | null>(null);
   const [sessions, setSessions] = useState<GameSession[]>([]);
+  const [userStats, setUserStats] = useState<UserStats>({ totalShards: 0, puzzlesSolved: 0 });
   const [loading, setLoading] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   
   // Generator Config
-  const [pType, setPType] = useState<string>('Sudoku');
   const [pDiff, setPDiff] = useState<string>('Medium');
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [lastReward, setLastReward] = useState(0);
 
   useEffect(() => {
     setSessions(getAllSessions());
-  }, []);
+    setUserStats(getUserStats());
+  }, [view]);
 
   // Timer logic
   useEffect(() => {
@@ -69,13 +75,13 @@ export default function EnigmaNexus() {
     return [h, m, s].map(v => v < 10 ? "0" + v : v).join(":");
   };
 
-  const startNewGame = async () => {
+  const startNewGame = async (type: string) => {
     setLoading(true);
     try {
-      const result = await generateUniquePuzzle({ puzzleType: pType, difficulty: pDiff });
+      const result = await generateUniquePuzzle({ puzzleType: type, difficulty: pDiff });
       const newSession: GameSession = {
         id: Math.random().toString(36).substr(2, 9),
-        type: pType as any,
+        type: type as any,
         difficulty: pDiff,
         data: result.puzzleData,
         solution: result.solution,
@@ -89,7 +95,7 @@ export default function EnigmaNexus() {
       saveSession(newSession);
       setActiveSession(newSession);
       setElapsedSeconds(0);
-      setSessions(getAllSessions());
+      setShowCelebration(false);
       setView('play');
     } catch (err) {
       toast({
@@ -105,11 +111,12 @@ export default function EnigmaNexus() {
   const resumeGame = (session: GameSession) => {
     setActiveSession(session);
     setElapsedSeconds(session.timeSpent || 0);
+    setShowCelebration(session.isCompleted || false);
     setView('play');
   };
 
   const handleUpdate = (progress: string, moveIncrement = 1) => {
-    if (!activeSession) return;
+    if (!activeSession || activeSession.isCompleted) return;
     
     const isNowCompleted = progress === activeSession.solution;
     
@@ -119,18 +126,23 @@ export default function EnigmaNexus() {
       lastPlayed: Date.now(),
       moves: activeSession.moves + moveIncrement,
       timeSpent: elapsedSeconds,
-      isCompleted: isNowCompleted || activeSession.isCompleted
+      isCompleted: isNowCompleted
     };
     
-    setActiveSession(updated);
-    saveSession(updated);
-
-    if (isNowCompleted && !activeSession.isCompleted) {
+    if (isNowCompleted) {
+      const reward = calculateReward(activeSession.difficulty, elapsedSeconds);
+      updated.earnedShards = reward;
+      setLastReward(reward);
+      addReward(reward);
+      setShowCelebration(true);
       toast({
         title: "Logic Pattern Synchronized!",
-        description: `Puzzle completed in ${formatTime(elapsedSeconds)} with ${updated.moves} moves.`,
+        description: `You earned ${reward} Nexus Shards!`,
       });
     }
+
+    setActiveSession(updated);
+    saveSession(updated);
   };
 
   const resetPuzzle = () => {
@@ -138,6 +150,7 @@ export default function EnigmaNexus() {
     const updated = { ...activeSession, userProgress: activeSession.data, moves: 0, timeSpent: 0, isCompleted: false };
     setActiveSession(updated);
     setElapsedSeconds(0);
+    setShowCelebration(false);
     saveSession(updated);
   };
 
@@ -145,14 +158,13 @@ export default function EnigmaNexus() {
     if (activeSession) {
       saveSession({ ...activeSession, timeSpent: elapsedSeconds });
     }
-    setSessions(getAllSessions());
     setView('hub');
   };
 
   const hubPuzzles = [
-    { id: 'Sudoku', name: 'Sudoku', icon: Grid3X3, desc: '9x9 Number Logic Grid', image: PlaceHolderImages?.[0] },
-    { id: 'Sliding Puzzle', name: 'Sliding Tiles', icon: Layers, desc: '3x3 Kinetic Reordering', image: PlaceHolderImages?.[1] },
-    { id: 'Memory Grid', name: 'Memory Grid', icon: LayoutGrid, desc: '4x4 Pattern Matching', image: PlaceHolderImages?.[2] },
+    { id: 'Sudoku', name: 'Sudoku', icon: Grid3X3, desc: '9x9 Number Logic Grid', image: PlaceHolderImages?.[0], color: 'text-primary' },
+    { id: 'Sliding Puzzle', name: 'Sliding Tiles', icon: Layers, desc: '3x3 Kinetic Reordering', image: PlaceHolderImages?.[1], color: 'text-accent' },
+    { id: 'Memory Grid', name: 'Memory Grid', icon: LayoutGrid, desc: '4x4 Pattern Matching', image: PlaceHolderImages?.[2], color: 'text-yellow-400' },
   ];
 
   if (view === 'hub') {
@@ -165,124 +177,146 @@ export default function EnigmaNexus() {
             </div>
             <div>
               <h1 className="text-3xl font-headline font-bold tracking-tight text-primary">ENIGMA NEXUS</h1>
-              <p className="text-sm text-muted-foreground uppercase tracking-widest font-medium">Cognitive Logic Hub</p>
+              <div className="flex items-center gap-3">
+                <p className="text-sm text-muted-foreground uppercase tracking-widest font-medium">Cognitive Logic Hub</p>
+                <div className="flex items-center gap-1 bg-accent/20 text-accent px-2 py-0.5 rounded-full text-xs font-bold border border-accent/30">
+                  <Zap className="size-3" /> {userStats.totalShards} SHARDS
+                </div>
+              </div>
             </div>
           </div>
           <div className="flex gap-4">
+            <div className="flex flex-col items-center bg-card/50 px-4 py-2 rounded-xl border border-primary/10">
+              <span className="text-[10px] text-muted-foreground uppercase font-bold">Difficulty Level</span>
+              <Select value={pDiff} onValueChange={setPDiff}>
+                <SelectTrigger className="h-8 border-none bg-transparent font-bold focus:ring-0">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Easy">Beginner</SelectItem>
+                  <SelectItem value="Medium">Skilled</SelectItem>
+                  <SelectItem value="Hard">Expert</SelectItem>
+                  <SelectItem value="Expert">Grandmaster</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <Button variant="outline" onClick={() => setView('analytics')} className="gap-2 border-primary/20 hover:bg-primary/10">
               <Trophy className="size-4 text-accent" /> Achievement Data
             </Button>
           </div>
         </header>
 
-        <main className="max-w-6xl mx-auto">
-          <section className="mb-16">
-            <h2 className="text-2xl font-headline mb-8 flex items-center gap-3">
-              <Plus className="text-primary size-6" /> Initialize New Matrix
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <main className="max-w-6xl mx-auto space-y-16">
+          <section>
+            <div className="flex items-center justify-between mb-8">
+              <h2 className="text-2xl font-headline flex items-center gap-3">
+                <Sparkles className="text-primary size-6" /> Instant Initialization
+              </h2>
+              <p className="text-xs text-muted-foreground italic">Click any card to start generating a matrix.</p>
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {hubPuzzles.map((p) => (
                 <Card 
                   key={p.id} 
-                  className={cn(
-                    "group relative overflow-hidden border-primary/10 transition-all hover:border-primary/40 hover:shadow-2xl hover:shadow-primary/5 cursor-pointer",
-                    pType === p.id ? "ring-2 ring-primary bg-primary/5 shadow-lg" : "bg-card/50"
-                  )}
-                  onClick={() => setPType(p.id)}
+                  className="group relative overflow-hidden border-primary/10 transition-all hover:border-primary/40 hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/20 cursor-pointer bg-card/50"
+                  onClick={() => startNewGame(p.id)}
                 >
-                  <div className="h-40 relative bg-muted">
+                  <div className="h-48 relative bg-muted">
                     {p.image && (
                       <Image 
                         src={p.image.imageUrl} 
                         alt={p.name} 
                         fill 
-                        className="object-cover opacity-40 group-hover:opacity-60 transition-opacity" 
+                        className="object-cover opacity-40 group-hover:opacity-80 transition-all duration-700 group-hover:scale-110" 
                         data-ai-hint={p.image.imageHint}
                       />
                     )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-background to-transparent" />
-                  </div>
-                  <CardHeader className="relative -mt-10">
-                    <div className={cn(
-                      "size-12 rounded-xl flex items-center justify-center mb-2 transition-transform group-hover:scale-110 shadow-lg",
-                      pType === p.id ? "bg-primary text-white" : "bg-secondary text-primary"
-                    )}>
-                      <p.icon className="size-6" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
+                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                      <div className="bg-primary text-white p-4 rounded-full shadow-2xl scale-75 group-hover:scale-100 transition-transform">
+                        <PlayCircle className="size-10" />
+                      </div>
                     </div>
-                    <CardTitle className="font-headline">{p.name}</CardTitle>
-                    <CardDescription>{p.desc}</CardDescription>
+                  </div>
+                  <CardHeader className="relative -mt-12 backdrop-blur-sm bg-background/40">
+                    <div className={cn(
+                      "size-14 rounded-2xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110 shadow-2xl bg-secondary",
+                      p.color
+                    )}>
+                      <p.icon className="size-8" />
+                    </div>
+                    <CardTitle className="font-headline text-xl">{p.name}</CardTitle>
+                    <CardDescription className="line-clamp-2">{p.desc}</CardDescription>
                   </CardHeader>
                 </Card>
               ))}
             </div>
-
-            <div className="mt-8 flex flex-col sm:flex-row items-center gap-4 bg-muted/30 p-6 rounded-2xl border border-primary/10 backdrop-blur-sm">
-              <div className="flex-1 space-y-1">
-                <p className="font-medium text-lg">Logical Difficulty</p>
-                <p className="text-sm text-muted-foreground">Adjust the AI Weaver's complexity parameters.</p>
-              </div>
-              <Select value={pDiff} onValueChange={setPDiff}>
-                <SelectTrigger className="w-full sm:w-48 bg-card border-primary/20">
-                  <SelectValue placeholder="Select Difficulty" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Easy">Easy (Beginner)</SelectItem>
-                  <SelectItem value="Medium">Medium (Skilled)</SelectItem>
-                  <SelectItem value="Hard">Hard (Expert)</SelectItem>
-                  <SelectItem value="Expert">Expert (Grandmaster)</SelectItem>
-                </SelectContent>
-              </Select>
-              <Button 
-                onClick={startNewGame} 
-                disabled={loading}
-                className="w-full sm:w-auto h-12 px-10 rounded-xl bg-primary hover:bg-primary/90 text-white font-bold text-lg neon-glow transition-all active:scale-95"
-              >
-                {loading ? "Woven Logic..." : "CONSTRUCT MATRIX"}
-              </Button>
-            </div>
           </section>
 
           {sessions.length > 0 && (
-            <section>
+            <section className="bg-card/20 p-8 rounded-3xl border border-primary/5">
               <h2 className="text-2xl font-headline mb-8 flex items-center gap-3">
-                <Timer className="text-accent size-6" /> Residual Sessions
+                <Timer className="text-accent size-6" /> Residual Session Log
               </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {sessions.sort((a,b) => b.lastPlayed - a.lastPlayed).map((s) => (
                   <div 
                     key={s.id} 
-                    className="flex items-center justify-between p-4 bg-card border border-primary/5 rounded-xl hover:bg-muted/50 transition-colors group"
+                    className={cn(
+                      "flex flex-col p-5 bg-card border rounded-2xl transition-all group relative",
+                      s.isCompleted ? "border-accent/20 bg-accent/5" : "border-primary/10 hover:border-primary/40"
+                    )}
                   >
-                    <div className="flex items-center gap-4 cursor-pointer flex-1" onClick={() => resumeGame(s)}>
+                    <div className="flex items-center justify-between mb-4">
                       <div className={cn(
-                        "size-10 rounded-lg flex items-center justify-center font-bold",
-                        s.isCompleted ? "bg-accent/20 text-accent" : "bg-secondary text-primary"
+                        "px-2 py-1 rounded text-[10px] font-bold uppercase tracking-widest",
+                        s.isCompleted ? "bg-accent/20 text-accent" : "bg-primary/20 text-primary"
                       )}>
-                        {s.isCompleted ? <CheckCircle2 className="size-5" /> : <PlayCircle className="size-5" />}
+                        {s.isCompleted ? "Synchronized" : "In Progress"}
                       </div>
-                      <div className="min-w-0">
-                        <p className="font-medium truncate">{s.type}</p>
-                        <p className="text-xs text-muted-foreground">{s.difficulty} • {s.moves} moves</p>
-                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="icon" 
+                        className="size-6 text-muted-foreground hover:text-destructive"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          deleteSession(s.id);
+                          setSessions(getAllSessions());
+                        }}
+                      >
+                        ×
+                      </Button>
                     </div>
-                    <Button 
-                      variant="ghost" 
-                      size="icon" 
-                      className="text-muted-foreground hover:text-destructive opacity-0 group-hover:opacity-100 transition-opacity"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        deleteSession(s.id);
-                        setSessions(getAllSessions());
-                      }}
-                    >
-                      ×
-                    </Button>
+                    
+                    <div className="flex-1 cursor-pointer" onClick={() => resumeGame(s)}>
+                      <p className="font-bold text-lg mb-1">{s.type}</p>
+                      <div className="flex items-center gap-3 text-xs text-muted-foreground mb-4">
+                        <span className="flex items-center gap-1"><Star className="size-3" /> {s.difficulty}</span>
+                        <span className="flex items-center gap-1"><Layers className="size-3" /> {s.moves} moves</span>
+                      </div>
+                      
+                      <Button className="w-full bg-secondary hover:bg-primary hover:text-white transition-colors gap-2">
+                        {s.isCompleted ? "Review Results" : "Resume Logic"} <PlayCircle className="size-4" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
               </div>
             </section>
           )}
         </main>
+        
+        {loading && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-md">
+            <div className="text-center">
+              <div className="size-20 bg-primary/20 rounded-full flex items-center justify-center mb-6 animate-pulse mx-auto">
+                <Brain className="size-10 text-primary animate-bounce" />
+              </div>
+              <h3 className="text-2xl font-headline font-bold text-primary mb-2">Weaving Logic Threads...</h3>
+              <p className="text-muted-foreground">Synthesizing a unique {pDiff} matrix for your consciousness.</p>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -295,7 +329,22 @@ export default function EnigmaNexus() {
               <ArrowLeft className="size-4" /> Return to Hub
            </Button>
            <h1 className="text-4xl font-headline font-bold mb-4">Cognitive Evolution</h1>
-           <p className="text-muted-foreground mb-12">Performance metrics across your session history.</p>
+           <div className="flex gap-4 mb-12">
+             <div className="bg-accent/20 border border-accent/30 p-4 rounded-2xl flex items-center gap-4">
+                <Zap className="size-8 text-accent" />
+                <div>
+                  <p className="text-[10px] text-muted-foreground uppercase font-bold">Total Shards</p>
+                  <p className="text-2xl font-bold font-mono">{userStats.totalShards}</p>
+                </div>
+             </div>
+             <div className="bg-primary/20 border border-primary/30 p-4 rounded-2xl flex items-center gap-4">
+                <CheckCircle2 className="size-8 text-primary" />
+                <div>
+                  <p className="text-[10px] text-muted-foreground uppercase font-bold">Solved Puzzles</p>
+                  <p className="text-2xl font-bold font-mono">{userStats.puzzlesSolved}</p>
+                </div>
+             </div>
+           </div>
            
            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
              <Card className="bg-card/50 border-primary/20 backdrop-blur-md">
@@ -353,19 +402,31 @@ export default function EnigmaNexus() {
         </div>
       </nav>
 
-      <main className="flex-1 flex flex-col items-center justify-center p-4">
-        {activeSession?.isCompleted && (
-          <div className="mb-8 text-center animate-in fade-in zoom-in duration-500">
-             <div className="inline-flex items-center gap-2 bg-accent/20 text-accent px-6 py-2 rounded-full border border-accent/30 font-bold mb-2">
-               <CheckCircle2 className="size-5" /> Logic Synchronized
+      <main className="flex-1 flex flex-col items-center justify-center p-4 relative overflow-hidden">
+        {/* Background glow */}
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 size-[600px] bg-primary/5 blur-[120px] rounded-full -z-10" />
+
+        {showCelebration && (
+          <div className="mb-8 text-center animate-in fade-in zoom-in slide-in-from-top-10 duration-700">
+             <div className="inline-flex flex-col items-center gap-2 bg-accent/20 text-accent px-10 py-6 rounded-[2rem] border-2 border-accent/40 shadow-[0_0_50px_rgba(189,74,52,0.3)] mb-4">
+               <div className="flex items-center gap-3 text-3xl font-headline font-bold">
+                 <Trophy className="size-8" /> REWARD SYNCHRONIZED
+               </div>
+               <p className="text-accent/80 font-mono text-xl">+{activeSession?.earnedShards || lastReward} NEXUS SHARDS</p>
+               <div className="flex gap-1 mt-2">
+                 {[1,2,3,4,5].map(i => <Star key={i} className="size-4 fill-accent" />)}
+               </div>
              </div>
-             <p className="text-muted-foreground">Pattern fully solved. You may continue to refine or exit.</p>
+             <div className="flex justify-center gap-4">
+                <Button onClick={exitToHub} variant="outline" className="border-accent/20 hover:bg-accent/10">Return to Hub</Button>
+                <Button onClick={() => startNewGame(activeSession?.type || 'Sudoku')} className="bg-accent text-white hover:bg-accent/90">Next Matrix</Button>
+             </div>
           </div>
         )}
 
         <div className={cn(
-          "w-full max-w-2xl bg-card/40 border border-primary/10 rounded-3xl p-6 sm:p-12 shadow-2xl backdrop-blur-sm transition-all duration-500",
-          activeSession?.isCompleted && "border-accent/40 shadow-accent/5"
+          "w-full max-w-2xl bg-card/40 border border-primary/10 rounded-3xl p-6 sm:p-12 shadow-2xl backdrop-blur-sm transition-all duration-700",
+          showCelebration ? "border-accent/40 shadow-accent/20 scale-105" : "hover:border-primary/30"
         )}>
           {activeSession?.type === 'Sudoku' && (
             <SudokuBoard 
