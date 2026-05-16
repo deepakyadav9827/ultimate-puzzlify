@@ -32,14 +32,20 @@ const prompt = ai.definePrompt({
   input: {schema: GenerateUniquePuzzleInputSchema},
   output: {schema: GenerateUniquePuzzleOutputSchema},
   config: {
-    temperature: 0.4, // Lower temperature for more consistent/faster logic generation
+    temperature: 0.4,
   },
   prompt: `Act as a high-speed logic engine. Generate a unique {{{difficulty}}} {{{puzzleType}}} matrix.
 
-Output format rules:
-- Sudoku: 81 chars. '.' for empty, '1-9' for numbers.
-- Sliding Puzzle: 3x3 grid, comma-separated numbers 0-8 (0 is empty). Solveable state required.
-- Memory Grid: 16 items (8 pairs), comma-separated.
+STRICT OUTPUT RULES:
+- Sudoku: 
+    puzzleData: 81 chars, '.' for empty. 
+    solution: 81 chars, the fully solved grid.
+- Sliding Puzzle: 
+    puzzleData: 9 comma-separated numbers (0-8) in a SHUFFLED but SOLVABLE order. 0 is empty.
+    solution: ALWAYS exactly "1,2,3,4,5,6,7,8,0"
+- Memory Grid: 
+    puzzleData: 16 items (8 unique pairs), comma-separated. Emojis or symbols preferred.
+    solution: ALWAYS exactly "MATCHED"
 
 Be extremely concise. Ensure the solution is valid and unique.`,
 });

@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -14,7 +13,9 @@ export function SlidingBoard({ initialData, onUpdate }: SlidingBoardProps) {
   const size = 3;
 
   useEffect(() => {
-    setTiles(initialData.split(',').map(Number));
+    if (initialData) {
+      setTiles(initialData.split(',').map(Number));
+    }
   }, [initialData]);
 
   const moveTile = (index: number) => {
@@ -43,8 +44,8 @@ export function SlidingBoard({ initialData, onUpdate }: SlidingBoardProps) {
           key={i}
           onClick={() => moveTile(i)}
           className={cn(
-            "flex items-center justify-center text-3xl font-bold rounded-xl transition-all duration-300 transform cursor-pointer",
-            tile === 0 ? "bg-transparent cursor-default" : "bg-card border border-primary/20 text-primary shadow-lg hover:scale-105 hover:bg-primary hover:text-white"
+            "flex items-center justify-center text-3xl sm:text-4xl font-bold rounded-xl transition-all duration-300 transform",
+            tile === 0 ? "bg-transparent cursor-default" : "bg-card border border-primary/20 text-primary shadow-lg hover:scale-105 hover:bg-primary hover:text-white cursor-pointer select-none active:scale-95"
           )}
         >
           {tile !== 0 && tile}
