@@ -1,10 +1,12 @@
 
 'use client';
 
-import React, { createContext, useContext, ReactNode } from 'react';
+import React, { createContext, useContext, ReactNode, useEffect } from 'react';
 import { FirebaseApp } from 'firebase/app';
 import { Firestore } from 'firebase/firestore';
 import { Auth } from 'firebase/auth';
+import { errorEmitter } from './error-emitter';
+import { toast } from '@/hooks/use-toast';
 
 interface FirebaseContextType {
   app: FirebaseApp;
@@ -13,6 +15,25 @@ interface FirebaseContextType {
 }
 
 const FirebaseContext = createContext<FirebaseContextType | undefined>(undefined);
+
+function FirebaseErrorListener() {
+  useEffect(() => {
+    const handleError = (error: any) => {
+      toast({
+        variant: "destructive",
+        title: "Security Protocol Breach",
+        description: error.message || "The matrix blocked your synchronization request.",
+      });
+    };
+
+    errorEmitter.on('permission-error', handleError);
+    return () => {
+      errorEmitter.off('permission-error', handleError);
+    };
+  }, []);
+
+  return null;
+}
 
 export function FirebaseProvider({ 
   children, 
@@ -27,6 +48,7 @@ export function FirebaseProvider({
 }) {
   return (
     <FirebaseContext.Provider value={{ app, db, auth }}>
+      <FirebaseErrorListener />
       {children}
     </FirebaseContext.Provider>
   );

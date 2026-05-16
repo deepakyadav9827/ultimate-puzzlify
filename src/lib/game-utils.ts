@@ -1,5 +1,9 @@
 
+'use client';
+
 import { doc, setDoc, getDoc, collection, Firestore } from 'firebase/firestore';
+import { errorEmitter } from '@/firebase/error-emitter';
+import { FirestorePermissionError } from '@/firebase/errors';
 
 export interface GameSession {
   id: string;
@@ -28,11 +32,22 @@ export const STATS_KEY = 'up-user-stats-v1';
 
 export function saveSession(db: Firestore, userId: string, session: GameSession) {
   const sessionRef = doc(db, 'sessions', session.id);
-  setDoc(sessionRef, {
+  
+  const payload = {
     ...session,
     userId,
     timestamp: Date.now()
-  }, { merge: true });
+  };
+
+  setDoc(sessionRef, payload, { merge: true })
+    .catch(async (err) => {
+      const permissionError = new FirestorePermissionError({
+        path: sessionRef.path,
+        operation: 'write',
+        requestResourceData: payload,
+      });
+      errorEmitter.emit('permission-error', permissionError);
+    });
 
   // Local backup
   if (typeof window !== 'undefined') {
@@ -46,36 +61,57 @@ export function saveSession(db: Firestore, userId: string, session: GameSession)
 
 export async function updateCloudStats(db: Firestore, userId: string, shards: number) {
   const userRef = doc(db, 'users', userId);
-  const snap = await getDoc(userRef);
   
-  let currentStats: UserStats = { totalShards: 0, puzzlesSolved: 0 };
-  if (snap.exists()) {
-    currentStats = snap.data() as UserStats;
+  try {
+    const snap = await getDoc(userRef);
+    let currentStats: UserStats = { totalShards: 0, puzzlesSolved: 0 };
+    if (snap.exists()) {
+      currentStats = snap.data() as UserStats;
+    }
+
+    const updatedStats = {
+      totalShards: (currentStats.totalShards || 0) + shards,
+      puzzlesSolved: (currentStats.puzzlesSolved || 0) + 1,
+      lastLogin: new Date().toISOString()
+    };
+
+    setDoc(userRef, updatedStats, { merge: true })
+      .catch(async () => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: userRef.path,
+          operation: 'update',
+          requestResourceData: updatedStats,
+        }));
+      });
+    
+    // Leaderboard entry
+    const lbRef = doc(collection(db, 'leaderboard'));
+    const lbData = {
+      userId,
+      userName: snap.data()?.displayName || 'Anonymous Player',
+      score: updatedStats.totalShards,
+      timestamp: Date.now()
+    };
+    
+    setDoc(lbRef, lbData)
+      .catch(async () => {
+        errorEmitter.emit('permission-error', new FirestorePermissionError({
+          path: lbRef.path,
+          operation: 'create',
+          requestResourceData: lbData,
+        }));
+      });
+
+    // Local sync
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(STATS_KEY, JSON.stringify(updatedStats));
+    }
+
+    return updatedStats;
+  } catch (err) {
+    console.error("Failed to sync cloud stats", err);
+    return getUserStats();
   }
-
-  const updatedStats = {
-    totalShards: (currentStats.totalShards || 0) + shards,
-    puzzlesSolved: (currentStats.puzzlesSolved || 0) + 1,
-    lastLogin: new Date().toISOString()
-  };
-
-  setDoc(userRef, updatedStats, { merge: true });
-  
-  // Leaderboard entry
-  const lbRef = doc(collection(db, 'leaderboard'));
-  setDoc(lbRef, {
-    userId,
-    userName: snap.data()?.displayName || 'Anonymous Player',
-    score: updatedStats.totalShards,
-    timestamp: Date.now()
-  });
-
-  // Local sync
-  if (typeof window !== 'undefined') {
-    localStorage.setItem(STATS_KEY, JSON.stringify(updatedStats));
-  }
-
-  return updatedStats;
 }
 
 export function addReward(shards: number) {
