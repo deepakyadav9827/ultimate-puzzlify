@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -55,8 +54,8 @@ export function SudokuBoard({ initialData, userProgress, onUpdate }: SudokuBoard
   }, [selectedCell, handleInput]);
 
   return (
-    <div className="flex flex-col items-center gap-4 sm:gap-8 w-full max-w-md mx-auto">
-      <div className="grid grid-cols-9 gap-[1px] bg-border p-[1px] sm:p-[2px] rounded-lg overflow-hidden neon-glow aspect-square w-full">
+    <div className="flex flex-col items-center gap-6 sm:gap-10 w-full max-w-md mx-auto">
+      <div className="grid grid-cols-9 gap-[1px] bg-white/10 p-[2px] rounded-2xl overflow-hidden glass violet-glow aspect-square w-full">
         {grid.map((cell, i) => {
           const isFixed = initialData[i] !== '.';
           const isSelected = selectedCell === i;
@@ -71,11 +70,11 @@ export function SudokuBoard({ initialData, userProgress, onUpdate }: SudokuBoard
               key={i}
               onClick={() => handleCellClick(i)}
               className={cn(
-                "flex items-center justify-center bg-card text-xs sm:text-lg font-medium cursor-pointer transition-all hover:bg-muted relative select-none h-full",
-                isFixed ? "text-primary/60 font-bold bg-secondary/20" : "text-foreground",
-                isSelected && "bg-primary/20 ring-2 ring-primary inset-0 z-10",
-                isSubgridRight && "border-r-2 sm:border-r-[3px] border-r-primary/40",
-                isSubgridBottom && "border-b-2 sm:border-b-[3px] border-b-primary/40"
+                "flex items-center justify-center bg-transparent text-sm sm:text-xl font-headline cursor-pointer transition-all hover:bg-white/5 relative select-none h-full",
+                isFixed ? "text-violet-400 font-bold" : "text-foreground",
+                isSelected && "bg-primary/20 ring-2 ring-primary/50 inset-0 z-10",
+                isSubgridRight && "border-r-[2px] border-r-white/20",
+                isSubgridBottom && "border-b-[2px] border-b-white/20"
               )}
             >
               {cell === '.' ? '' : cell}
@@ -84,14 +83,14 @@ export function SudokuBoard({ initialData, userProgress, onUpdate }: SudokuBoard
         })}
       </div>
 
-      <div className="grid grid-cols-5 gap-1.5 sm:gap-2 w-full">
+      <div className="grid grid-cols-5 gap-2 sm:gap-3 w-full">
         {[1, 2, 3, 4, 5, 6, 7, 8, 9, 'C'].map((val) => (
           <Button
             key={val}
             variant="outline"
             className={cn(
-              "h-10 sm:h-12 text-sm sm:text-xl font-bold border-primary/10 hover:bg-primary/10 transition-transform active:scale-90",
-              val === 'C' && "text-destructive hover:bg-destructive/10 border-destructive/10"
+              "h-12 sm:h-14 text-lg sm:text-2xl font-headline font-bold glass border-white/10 hover:bg-primary/20 hover:text-white transition-all active:scale-90 rounded-xl",
+              val === 'C' && "text-destructive hover:bg-destructive/20 border-destructive/20"
             )}
             onClick={() => handleInput(val === 'C' ? '.' : val.toString())}
           >

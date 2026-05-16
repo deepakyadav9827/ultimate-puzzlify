@@ -30,7 +30,9 @@ import {
   Lock,
   ArrowLeft,
   Search,
-  TrendingUp
+  TrendingUp,
+  Skull,
+  RefreshCw
 } from 'lucide-react';
 import { GameSession, saveSession, getAllSessions, getUserStats, updateCloudStats, UserStats, calculateReward } from '@/lib/game-utils';
 import { cn } from '@/lib/utils';
@@ -39,7 +41,6 @@ import { useUser, useFirestore } from '@/firebase';
 
 type View = 'hub' | 'play' | 'profile' | 'leaderboard';
 
-// Fallback puzzles for when AI fails or is too slow
 const FALLBACK_PUZZLES: Record<string, { data: string, solution: string }> = {
   'Sudoku': {
     data: "53..7....6..195....98....6.8...6...34..8.3..17...2...6.6....28....419..5....8..79",
@@ -66,6 +67,7 @@ export default function UltimatePuzzlify() {
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
   const [pDiff, setPDiff] = useState<string>('Medium');
   const [showWin, setShowWin] = useState(false);
+  const [showGameOver, setShowGameOver] = useState(false);
 
   useEffect(() => {
     setSessions(getAllSessions());
@@ -74,11 +76,11 @@ export default function UltimatePuzzlify() {
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    if (view === 'play' && activeSession && !activeSession.isCompleted) {
+    if (view === 'play' && activeSession && !activeSession.isCompleted && !showGameOver) {
       interval = setInterval(() => setElapsedSeconds(s => s + 1), 1000);
     }
     return () => clearInterval(interval);
-  }, [view, activeSession]);
+  }, [view, activeSession, showGameOver]);
 
   const formatTime = (s: number) => {
     const m = Math.floor(s / 60);
@@ -102,14 +104,9 @@ export default function UltimatePuzzlify() {
           data = result.puzzleData;
           solution = result.solution;
         } catch (aiError) {
-          console.warn("AI stream offline or slow. Switching to pre-verified logic patterns.");
           const fallback = FALLBACK_PUZZLES[type] || FALLBACK_PUZZLES['Sudoku'];
           data = fallback.data;
           solution = fallback.solution;
-          toast({ 
-            title: "AI Matrix Offline", 
-            description: "Synchronizing stable logic pattern instead." 
-          });
         }
       }
 
@@ -133,18 +130,14 @@ export default function UltimatePuzzlify() {
       setActiveSession(newSession);
       setElapsedSeconds(0);
       setShowWin(false);
+      setShowGameOver(false);
       setView('play');
 
       if (user && db) {
         saveSession(db, user.uid, newSession);
       }
     } catch (err: any) {
-      console.error(err);
-      toast({ 
-        variant: "destructive", 
-        title: "Synchronization Error", 
-        description: "The logic stream could not be established." 
-      });
+      toast({ variant: "destructive", title: "Protocol Failed", description: "Logical thread initialization failed." });
     } finally {
       setLoading(false);
     }
@@ -153,6 +146,11 @@ export default function UltimatePuzzlify() {
   const handleUpdate = (progress: string, moveIncrement = 1) => {
     if (!activeSession || activeSession.isCompleted) return;
     
+    if (progress === "LOSE") {
+      setShowGameOver(true);
+      return;
+    }
+
     const isNowCompleted = progress === activeSession.solution || progress === "WIN" || progress === "MATCHED";
     const updated: GameSession = { 
       ...activeSession, 
@@ -168,7 +166,6 @@ export default function UltimatePuzzlify() {
         updateCloudStats(db, user.uid, reward).then(stats => setUserStats(stats));
       }
       setShowWin(true);
-      toast({ title: "Victory!", description: `Logic Synchronized. +${reward} Shards earned.` });
     }
 
     setActiveSession(updated);
@@ -205,7 +202,7 @@ export default function UltimatePuzzlify() {
             </div>
             <div>
               <h1 className="text-3xl sm:text-4xl font-headline font-bold text-white tracking-tighter">ULTIMATE PUZZLIFY</h1>
-              <p className="text-sm text-muted-foreground font-medium tracking-widest uppercase">Premium Multi Puzzles</p>
+              <p className="game-status-label">Premium Logic Protocol</p>
             </div>
           </div>
           <div className="flex items-center gap-4 w-full md:w-auto">
@@ -227,17 +224,14 @@ export default function UltimatePuzzlify() {
             <div className="relative z-10">
               <div className="flex items-center gap-2 text-violet-400 mb-4">
                 <TrendingUp className="size-5" />
-                <span className="text-sm font-bold uppercase tracking-widest">Protocol Active</span>
+                <span className="game-status-label">Protocol Active</span>
               </div>
-              <h2 className="text-3xl sm:text-4xl font-headline font-bold mb-4">Daily AI Weaving</h2>
-              <p className="text-muted-foreground mb-8 max-w-md">The neural mesh generates unique logic patterns every day. Solve them to earn premium shard multipliers.</p>
+              <h2 className="text-3xl sm:text-5xl font-headline font-bold mb-4">Neural Weaving</h2>
+              <p className="text-muted-foreground mb-8 max-w-md">Generate unique logical threads daily. Master the mesh to earn premium shards.</p>
               <div className="flex flex-wrap items-center gap-4">
-                <Button className="rounded-xl px-10 h-14 bg-violet-600 hover:bg-violet-500 violet-glow text-lg font-bold" onClick={() => startNewGame('Sudoku')}>
+                <Button className="rounded-xl px-10 h-14 bg-violet-600 hover:bg-violet-500 violet-glow text-lg font-bold uppercase tracking-widest" onClick={() => startNewGame('Sudoku')}>
                   Initialize Today
                 </Button>
-                <div className="text-sm font-mono text-violet-400 bg-violet-400/10 px-4 py-2 rounded-lg border border-violet-400/20">
-                  REWARD: +500 SHARDS
-                </div>
               </div>
             </div>
           </Card>
@@ -246,7 +240,7 @@ export default function UltimatePuzzlify() {
             <div>
               <div className="flex items-center gap-2 mb-4">
                 <Activity className="size-4 text-violet-400" />
-                <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Difficulty Protocol</h3>
+                <h3 className="game-status-label">Difficulty Protocol</h3>
               </div>
               <Select value={pDiff} onValueChange={setPDiff}>
                 <SelectTrigger className="bg-white/5 border-none h-16 rounded-2xl text-xl font-bold">
@@ -261,9 +255,9 @@ export default function UltimatePuzzlify() {
               </Select>
             </div>
             <div className="space-y-4">
-              <div className="flex justify-between text-xs font-bold uppercase tracking-tighter">
-                <span className="text-muted-foreground">Solved Today</span>
-                <span className="text-violet-400">{userStats.puzzlesSolved} Matrix</span>
+              <div className="flex justify-between game-status-label">
+                <span>Progress Matrix</span>
+                <span className="text-violet-400">{userStats.puzzlesSolved} SOLVED</span>
               </div>
               <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
                 <div className="h-full bg-violet-600 rounded-full" style={{ width: `${Math.min(100, (userStats.puzzlesSolved / 10) * 100)}%` }} />
@@ -289,8 +283,8 @@ export default function UltimatePuzzlify() {
                     <g.icon className="size-8" />
                   </div>
                   <CardTitle className="text-xl mb-1">{g.name}</CardTitle>
-                  <CardDescription className="text-xs uppercase tracking-widest font-bold opacity-60">
-                    {idx === 0 ? "Neural Logic" : "Neural Strategy"}
+                  <CardDescription className="game-status-label opacity-60">
+                    Neural Thread
                   </CardDescription>
                   <ChevronRight className="absolute bottom-8 right-8 opacity-0 group-hover:opacity-100 transition-all translate-x-[-10px] group-hover:translate-x-0" />
                 </Card>
@@ -305,8 +299,8 @@ export default function UltimatePuzzlify() {
               <div className="size-24 glass rounded-3xl mx-auto flex items-center justify-center violet-glow mb-8 animate-pulse">
                 <Cpu className="size-12 text-violet-400" />
               </div>
-              <h2 className="text-4xl font-headline font-bold text-gradient">WEAVING NEURAL MESH</h2>
-              <p className="text-muted-foreground text-sm mt-4 tracking-widest uppercase">Initializing Logic Protocol...</p>
+              <h2 className="game-title">WEAVING NEURAL MESH</h2>
+              <p className="game-status-label mt-4">Initializing Logic Protocol...</p>
               <div className="mt-8 flex gap-2 justify-center">
                 {[1,2,3,4].map(i => <div key={i} className="size-2.5 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: `${i*0.15}s` }} />)}
               </div>
@@ -326,7 +320,7 @@ export default function UltimatePuzzlify() {
           </Button>
           <div>
             <h2 className="text-lg font-bold text-violet-400 uppercase tracking-tighter">{activeSession?.type}</h2>
-            <div className="flex gap-2 text-[10px] uppercase font-bold text-muted-foreground">
+            <div className="flex gap-2 game-status-label">
               <span>{activeSession?.difficulty}</span>
               <span className="text-violet-400">SYNCED</span>
             </div>
@@ -338,13 +332,13 @@ export default function UltimatePuzzlify() {
             <div className="flex items-center gap-2 font-mono text-xl text-violet-400 font-bold">
               <Timer className="size-4" /> {formatTime(elapsedSeconds)}
             </div>
-            <span className="text-[10px] uppercase font-bold text-muted-foreground">RUNTIME</span>
+            <span className="game-status-label">RUNTIME</span>
           </div>
           <div className="flex flex-col items-end">
             <div className="font-mono text-xl text-primary font-bold">{activeSession?.moves}</div>
-            <span className="text-[10px] uppercase font-bold text-muted-foreground">OPS</span>
+            <span className="game-status-label">OPERATIONS</span>
           </div>
-          <Button variant="ghost" size="icon" className="glass size-10" onClick={() => setElapsedSeconds(0)}>
+          <Button variant="ghost" size="icon" className="glass size-10 hover:text-violet-400 transition-colors" onClick={() => { startNewGame(activeSession?.type || 'Sudoku') }}>
             <RotateCcw className="size-4" />
           </Button>
         </div>
@@ -352,14 +346,37 @@ export default function UltimatePuzzlify() {
 
       <main className="flex-1 flex flex-col items-center justify-center p-6 relative overflow-hidden">
         {showWin && (
-          <div className="fixed inset-0 z-[60] glass flex flex-col items-center justify-center animate-in zoom-in duration-500 p-6">
-            <div className="glass p-12 rounded-[3rem] text-center violet-glow border-violet-400/30 max-w-md w-full">
-              <Trophy className="size-24 text-amber-400 mx-auto mb-6 animate-bounce" />
-              <h2 className="text-4xl font-headline font-bold mb-2">MATRIX SOLVED</h2>
-              <p className="text-violet-300 font-mono text-2xl mb-8">+{calculateReward(activeSession?.difficulty || 'Easy', elapsedSeconds)} SHARDS</p>
-              <div className="flex gap-4">
-                <Button className="flex-1 h-14 rounded-2xl glass hover:bg-white/10" onClick={() => setView('hub')}>BACK TO HUB</Button>
-                <Button className="flex-1 h-14 rounded-2xl bg-violet-600 hover:bg-violet-500" onClick={() => startNewGame(activeSession?.type || 'Sudoku')}>NEXT MATRIX</Button>
+          <div className="fixed inset-0 z-[60] glass flex flex-col items-center justify-center animate-in zoom-in duration-500 p-6 backdrop-blur-3xl">
+            <div className="glass p-12 rounded-[3rem] text-center violet-glow border-violet-400/30 max-w-xl w-full">
+              <div className="size-32 rounded-full glass mx-auto mb-8 flex items-center justify-center violet-pulse">
+                <Trophy className="size-16 text-amber-400" />
+              </div>
+              <h2 className="game-title mb-2">MATRIX SOLVED</h2>
+              <p className="game-status-label mb-8">Logic Synchronized Successfully</p>
+              <div className="text-violet-300 font-mono text-4xl mb-12 font-bold">
+                +{calculateReward(activeSession?.difficulty || 'Easy', elapsedSeconds)} SHARDS
+              </div>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Button className="flex-1 h-16 rounded-2xl glass hover:bg-white/10 text-lg uppercase font-bold tracking-widest" onClick={() => setView('hub')}>BACK TO HUB</Button>
+                <Button className="flex-1 h-16 rounded-2xl bg-violet-600 hover:bg-violet-500 violet-glow text-lg uppercase font-bold tracking-widest" onClick={() => startNewGame(activeSession?.type || 'Sudoku')}>NEXT MATRIX</Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {showGameOver && (
+          <div className="fixed inset-0 z-[60] glass flex flex-col items-center justify-center animate-in fade-in duration-500 p-6 backdrop-blur-3xl">
+            <div className="glass p-12 rounded-[3rem] text-center border-destructive/30 max-w-xl w-full">
+              <div className="size-32 rounded-full glass border-destructive/50 mx-auto mb-8 flex items-center justify-center">
+                <Skull className="size-16 text-destructive" />
+              </div>
+              <h2 className="game-over-title mb-2">PROTOCOL FAILED</h2>
+              <p className="game-status-label text-destructive mb-12">Neural Thread Disconnected</p>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Button className="flex-1 h-16 rounded-2xl glass hover:bg-white/10 text-lg uppercase font-bold tracking-widest" onClick={() => setView('hub')}>BACK TO HUB</Button>
+                <Button className="flex-1 h-16 rounded-2xl bg-destructive hover:bg-destructive/80 text-lg uppercase font-bold tracking-widest flex items-center justify-center gap-2" onClick={() => startNewGame(activeSession?.type || 'Sudoku')}>
+                  <RefreshCw className="size-5" /> RETRY PROTOCOL
+                </Button>
               </div>
             </div>
           </div>
@@ -374,7 +391,7 @@ export default function UltimatePuzzlify() {
         </div>
       </main>
 
-      {activeSession && !activeSession.isCompleted && (
+      {activeSession && !activeSession.isCompleted && !showGameOver && (
         <HintMentor puzzleType={activeSession.type} difficulty={activeSession.difficulty} gameState={activeSession.userProgress} />
       )}
     </div>
