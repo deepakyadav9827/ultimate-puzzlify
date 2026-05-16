@@ -1,6 +1,6 @@
 'use server';
 /**
- * @fileOverview Optimized Genkit flow to generate unique puzzles rapidly.
+ * @fileOverview Optimized Genkit flow to generate unique puzzles rapidly with fallbacks.
  *
  * - generateUniquePuzzle - A function that generates a unique puzzle.
  * - GenerateUniquePuzzleInput - The input type for the generateUniquePuzzle function.
@@ -32,7 +32,7 @@ const prompt = ai.definePrompt({
   input: {schema: GenerateUniquePuzzleInputSchema},
   output: {schema: GenerateUniquePuzzleOutputSchema},
   config: {
-    temperature: 0.2, // Lower temperature for faster, more deterministic output
+    temperature: 0.2,
   },
   prompt: `Act as a high-speed logic engine. Generate a unique {{{difficulty}}} {{{puzzleType}}} matrix.
 
@@ -57,10 +57,32 @@ const generateUniquePuzzleFlow = ai.defineFlow(
     outputSchema: GenerateUniquePuzzleOutputSchema,
   },
   async input => {
-    const {output} = await prompt(input);
-    if (!output) {
-      throw new Error('Logic stream interrupted.');
+    try {
+      const {output} = await prompt(input);
+      if (!output) throw new Error('Logic stream interrupted.');
+      return output;
+    } catch (error) {
+      console.warn('AI Quota exceeded or failure. Returning robust fallback matrix.');
+      // Fail-safe logic: Return high-quality static patterns based on type
+      if (input.puzzleType === 'Sliding Puzzle') {
+        return {
+          puzzleData: "1,2,3,4,5,6,7,0,8",
+          solution: "1,2,3,4,5,6,7,8,0",
+          description: "Stable logic sequence restored."
+        };
+      }
+      if (input.puzzleType === 'Memory Grid') {
+        return {
+          puzzleData: "🍎,🍌,🍒,🥑,🍎,🍌,🍒,🥑,⭐,🌙,☀️,☁️,⭐,🌙,☀️,☁️",
+          solution: "MATCHED",
+          description: "Classic pattern synchronization."
+        };
+      }
+      return {
+        puzzleData: "53..7....6..195....98....6.8...6...34..8.3..17...2...6.6....28....419..5....8..79",
+        solution: "534678912672195348198342567859761423426853791713924856961537284287419635345286179",
+        description: "Pre-verified logic matrix."
+      };
     }
-    return output;
   }
 );

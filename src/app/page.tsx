@@ -26,12 +26,10 @@ import {
   User,
   Hash,
   XCircle,
-  Shapes,
   Gamepad2,
   Lock,
   ArrowLeft,
   Search,
-  History,
   TrendingUp
 } from 'lucide-react';
 import { GameSession, saveSession, getAllSessions, getUserStats, updateCloudStats, UserStats, calculateReward } from '@/lib/game-utils';
@@ -97,7 +95,6 @@ export default function UltimatePuzzlify() {
       
       if (needsAI) {
         try {
-          // Attempt AI generation with a competitive race against a timeout or fallback
           const result = await Promise.race([
             generateUniquePuzzle({ puzzleType: type, difficulty: pDiff }),
             new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Timeout")), 12000))
@@ -105,13 +102,13 @@ export default function UltimatePuzzlify() {
           data = result.puzzleData;
           solution = result.solution;
         } catch (aiError) {
-          console.warn("AI generation slow or failed, using logic fallback patterns.");
+          console.warn("AI stream offline or slow. Switching to pre-verified logic patterns.");
           const fallback = FALLBACK_PUZZLES[type] || FALLBACK_PUZZLES['Sudoku'];
           data = fallback.data;
           solution = fallback.solution;
           toast({ 
-            title: "Network Latency Detected", 
-            description: "Synchronizing pre-verified logic matrix instead." 
+            title: "AI Matrix Offline", 
+            description: "Synchronizing stable logic pattern instead." 
           });
         }
       }
@@ -145,8 +142,8 @@ export default function UltimatePuzzlify() {
       console.error(err);
       toast({ 
         variant: "destructive", 
-        title: "Matrix Connection Failed", 
-        description: err.message || "The logic stream was interrupted." 
+        title: "Synchronization Error", 
+        description: "The logic stream could not be established." 
       });
     } finally {
       setLoading(false);
@@ -194,7 +191,6 @@ export default function UltimatePuzzlify() {
       games: [
         { id: '2048', name: '2048', icon: Hash, color: 'text-amber-400' },
         { id: 'TicTacToeAI', name: 'Tic Tac Toe', icon: XCircle, color: 'text-cyan-400' },
-        { id: 'Math', name: 'Math Pulse', icon: Activity, color: 'text-emerald-400', locked: true },
       ]
     }
   ];
@@ -286,13 +282,9 @@ export default function UltimatePuzzlify() {
               {cat.games.map((g) => (
                 <Card 
                   key={g.id} 
-                  onClick={() => !g.locked && startNewGame(g.id)}
-                  className={cn(
-                    "glass-card border-none rounded-[2rem] p-8 group cursor-pointer relative transition-all active:scale-95",
-                    g.locked && "opacity-40 grayscale pointer-events-none"
-                  )}
+                  onClick={() => startNewGame(g.id)}
+                  className="glass-card border-none rounded-[2rem] p-8 group cursor-pointer relative transition-all active:scale-95"
                 >
-                  {g.locked && <Lock className="absolute top-8 right-8 size-5 text-muted-foreground" />}
                   <div className={cn("size-14 rounded-2xl glass mb-6 flex items-center justify-center group-hover:scale-110 transition-transform", g.color)}>
                     <g.icon className="size-8" />
                   </div>
