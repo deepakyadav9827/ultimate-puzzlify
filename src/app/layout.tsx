@@ -1,9 +1,11 @@
 
 import type {Metadata} from 'next';
 import './globals.css';
+import { FirebaseClientProvider } from '@/firebase';
+import { Toaster } from '@/components/ui/toaster';
 
 export const metadata: Metadata = {
-  title: 'Enigma Nexus | Master Your Mind',
+  title: 'Ultimate Puzzlify | Premium Logic Puzzles',
   description: 'A refined suite of logic puzzles powered by advanced AI for the ultimate cognitive focus.',
 };
 
@@ -19,7 +21,12 @@ export default function RootLayout({
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet" />
       </head>
-      <body className="font-body antialiased">{children}</body>
+      <body className="font-body antialiased selection:bg-primary/30">
+        <FirebaseClientProvider>
+          {children}
+          <Toaster />
+        </FirebaseClientProvider>
+      </body>
     </html>
   );
 }

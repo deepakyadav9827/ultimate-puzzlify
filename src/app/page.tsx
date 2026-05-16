@@ -13,7 +13,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { 
-  Brain, 
   Grid3X3, 
   Layers, 
   LayoutGrid, 
@@ -33,13 +32,16 @@ import {
   Gamepad2,
   Lock
 } from 'lucide-react';
-import { GameSession, saveSession, getAllSessions, getUserStats, addReward, calculateReward, UserStats } from '@/lib/game-utils';
+import { GameSession, saveSession, getAllSessions, getUserStats, addReward, calculateReward, updateCloudStats, UserStats } from '@/lib/game-utils';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
+import { useUser, useFirestore } from '@/firebase';
 
 type View = 'hub' | 'play' | 'profile' | 'leaderboard';
 
 export default function UltimatePuzzlify() {
+  const { user } = useUser();
+  const db = useFirestore();
   const [view, setView] = useState<View>('hub');
   const [activeSession, setActiveSession] = useState<GameSession | null>(null);
   const [sessions, setSessions] = useState<GameSession[]>([]);
@@ -71,7 +73,6 @@ export default function UltimatePuzzlify() {
   const startNewGame = async (type: string) => {
     setLoading(true);
     try {
-      // Logic for AI games vs Logic games
       const needsAI = ['Sudoku', 'Sliding Puzzle', 'Memory Grid'].includes(type);
       let data = "";
       let solution = "";
@@ -100,6 +101,10 @@ export default function UltimatePuzzlify() {
       setElapsedSeconds(0);
       setShowWin(false);
       setView('play');
+
+      if (user && db) {
+        saveSession(db, user.uid, newSession);
+      }
     } catch (err) {
       toast({ variant: "destructive", title: "Connection Error", description: "The matrix rejected our sync request." });
     } finally {
@@ -110,7 +115,7 @@ export default function UltimatePuzzlify() {
   const handleUpdate = (progress: string, moveIncrement = 1) => {
     if (!activeSession || activeSession.isCompleted) return;
     
-    const isNowCompleted = progress === activeSession.solution || progress === "WIN";
+    const isNowCompleted = progress === activeSession.solution || progress === "WIN" || progress === "MATCHED";
     const updated: GameSession = { 
       ...activeSession, 
       userProgress: progress, 
@@ -122,12 +127,17 @@ export default function UltimatePuzzlify() {
     if (isNowCompleted) {
       const reward = calculateReward(activeSession.difficulty, elapsedSeconds);
       addReward(reward);
+      if (user && db) {
+        updateCloudStats(db, user.uid, reward).then(stats => setUserStats(stats));
+      }
       setShowWin(true);
       toast({ title: "Victory!", description: `Matrix Deciphered. +${reward} Shards.` });
     }
 
     setActiveSession(updated);
-    saveSession(updated);
+    if (user && db) {
+      saveSession(db, user.uid, updated);
+    }
   };
 
   const games = [

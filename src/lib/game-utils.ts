@@ -1,4 +1,6 @@
 
+import { doc, setDoc, getDoc, collection, Firestore } from 'firebase/firestore';
+
 export interface GameSession {
   id: string;
   type: 'Sudoku' | 'Sliding Puzzle' | 'Memory Grid' | '2048' | 'TicTacToeAI' | 'Math' | 'Word';
@@ -14,21 +16,83 @@ export interface GameSession {
   earnedShards?: number;
 }
 
-export const STORAGE_KEY = 'ultimate-puzzlify-v1';
-export const USER_STATS_KEY = 'up-user-stats-v1';
-
 export interface UserStats {
   totalShards: number;
   puzzlesSolved: number;
+  level?: number;
+  achievements?: string[];
 }
 
-export function saveSession(session: GameSession) {
+export const STORAGE_KEY = 'ultimate-puzzlify-v1';
+export const STATS_KEY = 'up-user-stats-v1';
+
+export function saveSession(db: Firestore, userId: string, session: GameSession) {
+  const sessionRef = doc(db, 'sessions', session.id);
+  setDoc(sessionRef, {
+    ...session,
+    userId,
+    timestamp: Date.now()
+  }, { merge: true });
+
+  // Local backup
+  if (typeof window !== 'undefined') {
+    const sessions = getAllSessions();
+    const idx = sessions.findIndex(s => s.id === session.id);
+    if (idx > -1) sessions[idx] = session;
+    else sessions.push(session);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
+  }
+}
+
+export async function updateCloudStats(db: Firestore, userId: string, shards: number) {
+  const userRef = doc(db, 'users', userId);
+  const snap = await getDoc(userRef);
+  
+  let currentStats: UserStats = { totalShards: 0, puzzlesSolved: 0 };
+  if (snap.exists()) {
+    currentStats = snap.data() as UserStats;
+  }
+
+  const updatedStats = {
+    totalShards: (currentStats.totalShards || 0) + shards,
+    puzzlesSolved: (currentStats.puzzlesSolved || 0) + 1,
+    lastLogin: new Date().toISOString()
+  };
+
+  setDoc(userRef, updatedStats, { merge: true });
+  
+  // Leaderboard entry
+  const lbRef = doc(collection(db, 'leaderboard'));
+  setDoc(lbRef, {
+    userId,
+    userName: snap.data()?.displayName || 'Anonymous Player',
+    score: updatedStats.totalShards,
+    timestamp: Date.now()
+  });
+
+  // Local sync
+  if (typeof window !== 'undefined') {
+    localStorage.setItem(STATS_KEY, JSON.stringify(updatedStats));
+  }
+
+  return updatedStats;
+}
+
+export function addReward(shards: number) {
   if (typeof window === 'undefined') return;
-  const sessions = getAllSessions();
-  const index = sessions.findIndex(s => s.id === session.id);
-  if (index >= 0) sessions[index] = session;
-  else sessions.push(session);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(sessions));
+  const stats = getUserStats();
+  const updated = {
+    ...stats,
+    totalShards: stats.totalShards + shards,
+    puzzlesSolved: stats.puzzlesSolved + 1
+  };
+  localStorage.setItem(STATS_KEY, JSON.stringify(updated));
+}
+
+export function calculateReward(diff: string, time: number): number {
+  const base = diff === 'Easy' ? 50 : diff === 'Medium' ? 120 : diff === 'Hard' ? 300 : 750;
+  const timeBonus = Math.max(0, 100 - Math.floor(time / 10));
+  return base + timeBonus;
 }
 
 export function getAllSessions(): GameSession[] {
@@ -40,21 +104,7 @@ export function getAllSessions(): GameSession[] {
 
 export function getUserStats(): UserStats {
   if (typeof window === 'undefined') return { totalShards: 0, puzzlesSolved: 0 };
-  const stored = localStorage.getItem(USER_STATS_KEY);
+  const stored = localStorage.getItem(STATS_KEY);
   if (!stored) return { totalShards: 0, puzzlesSolved: 0 };
   try { return JSON.parse(stored); } catch { return { totalShards: 0, puzzlesSolved: 0 }; }
-}
-
-export function addReward(shards: number) {
-  if (typeof window === 'undefined') return;
-  const stats = getUserStats();
-  stats.totalShards += shards;
-  stats.puzzlesSolved += 1;
-  localStorage.setItem(USER_STATS_KEY, JSON.stringify(stats));
-}
-
-export function calculateReward(diff: string, time: number): number {
-  const base = diff === 'Easy' ? 50 : diff === 'Medium' ? 120 : diff === 'Hard' ? 300 : 750;
-  const timeBonus = Math.max(0, 100 - Math.floor(time / 10));
-  return base + timeBonus;
 }
