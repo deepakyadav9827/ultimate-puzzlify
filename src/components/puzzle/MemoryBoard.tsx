@@ -23,7 +23,6 @@ export function MemoryBoard({ initialData, size = 4, onUpdate }: MemoryBoardProp
   }, [initialData]);
 
   const handleClick = (index: number) => {
-    // Prevent clicking if 2 are already flipped, or card is already flipped/solved
     if (flipped.length >= 2 || flipped.includes(index) || solved.includes(index)) return;
 
     const newFlipped = [...flipped, index];
@@ -33,20 +32,16 @@ export function MemoryBoard({ initialData, size = 4, onUpdate }: MemoryBoardProp
       const [first, second] = newFlipped;
       
       if (items[first] === items[second]) {
-        // It's a match!
         const newSolved = [...solved, first, second];
         setSolved(newSolved);
         setFlipped([]);
         
-        // If all are matched, send the "MATCHED" signal to complete the game
         if (newSolved.length === items.length) {
           onUpdate("MATCHED", 1);
         } else {
-          // Send back a non-matching progress string to record the move
           onUpdate(`progress-${newSolved.length}`, 1);
         }
       } else {
-        // No match: flip back after delay
         setTimeout(() => {
           setFlipped([]);
         }, 800);
@@ -55,14 +50,16 @@ export function MemoryBoard({ initialData, size = 4, onUpdate }: MemoryBoardProp
     }
   };
 
-  // Dynamic grid styles based on size
   const gridStyle = {
     gridTemplateColumns: `repeat(${size}, minmax(0, 1fr))`,
   };
 
   return (
     <div 
-      className="grid gap-2 sm:gap-3 w-full max-w-2xl mx-auto aspect-square p-2"
+      className={cn(
+        "grid w-full max-w-2xl mx-auto aspect-square p-1 sm:p-2",
+        size === 6 ? "gap-1 sm:gap-2" : "gap-2 sm:gap-4"
+      )}
       style={gridStyle}
     >
       {items.map((item, i) => {
@@ -79,20 +76,18 @@ export function MemoryBoard({ initialData, size = 4, onUpdate }: MemoryBoardProp
               "relative w-full h-full transition-all duration-500 transform-gpu preserve-3d",
               isFlipped ? "rotate-y-180" : ""
             )}>
-              {/* Front (Hidden) */}
               <div className={cn(
-                "absolute inset-0 bg-secondary rounded-lg border border-primary/20 flex items-center justify-center text-primary/30 font-bold backface-hidden group-hover:border-primary/50 transition-colors",
-                size === 6 ? "text-lg" : "text-xl sm:text-2xl",
+                "absolute inset-0 bg-secondary rounded-lg sm:rounded-xl border border-primary/20 flex items-center justify-center text-primary/30 font-bold backface-hidden group-hover:border-primary/50 transition-colors",
+                size === 6 ? "text-sm sm:text-xl" : "text-xl sm:text-4xl",
                 isMatched && "opacity-0 pointer-events-none"
               )}>
                 ?
               </div>
               
-              {/* Back (Revealed) */}
               <div className={cn(
-                "absolute inset-0 bg-primary/10 border-2 border-primary rounded-lg flex items-center justify-center backface-hidden rotate-y-180",
-                size === 6 ? "text-xl sm:text-3xl" : "text-2xl sm:text-4xl",
-                isMatched && "border-accent bg-accent/10 text-accent"
+                "absolute inset-0 bg-primary/10 border-2 border-primary rounded-lg sm:rounded-xl flex items-center justify-center backface-hidden rotate-y-180",
+                size === 6 ? "text-lg sm:text-3xl" : "text-3xl sm:text-5xl",
+                isMatched && "border-accent bg-accent/10 text-accent neon-glow"
               )}>
                 {item}
               </div>

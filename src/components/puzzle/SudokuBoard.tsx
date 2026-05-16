@@ -55,7 +55,7 @@ export function SudokuBoard({ initialData, userProgress, onUpdate }: SudokuBoard
 
   return (
     <div className="flex flex-col items-center gap-6 sm:gap-10 w-full max-w-md mx-auto">
-      <div className="grid grid-cols-9 gap-[1px] bg-white/10 p-[2px] rounded-2xl overflow-hidden glass violet-glow aspect-square w-full">
+      <div className="grid grid-cols-9 gap-[1px] bg-white/10 p-[1px] sm:p-[2px] rounded-xl sm:rounded-2xl overflow-hidden glass violet-glow aspect-square w-full">
         {grid.map((cell, i) => {
           const isFixed = initialData[i] !== '.';
           const isSelected = selectedCell === i;
@@ -70,11 +70,11 @@ export function SudokuBoard({ initialData, userProgress, onUpdate }: SudokuBoard
               key={i}
               onClick={() => handleCellClick(i)}
               className={cn(
-                "flex items-center justify-center bg-transparent text-sm sm:text-xl font-headline cursor-pointer transition-all hover:bg-white/5 relative select-none h-full",
+                "flex items-center justify-center bg-transparent text-[12px] sm:text-xl font-headline cursor-pointer transition-all hover:bg-white/5 relative select-none h-full",
                 isFixed ? "text-violet-400 font-bold" : "text-foreground",
-                isSelected && "bg-primary/20 ring-2 ring-primary/50 inset-0 z-10",
-                isSubgridRight && "border-r-[2px] border-r-white/20",
-                isSubgridBottom && "border-b-[2px] border-b-white/20"
+                isSelected && "bg-primary/30 ring-1 sm:ring-2 ring-primary/50 inset-0 z-10",
+                isSubgridRight && "border-r-[1px] sm:border-r-[2px] border-r-white/30",
+                isSubgridBottom && "border-b-[1px] sm:border-b-[2px] border-b-white/30"
               )}
             >
               {cell === '.' ? '' : cell}
@@ -89,7 +89,7 @@ export function SudokuBoard({ initialData, userProgress, onUpdate }: SudokuBoard
             key={val}
             variant="outline"
             className={cn(
-              "h-12 sm:h-14 text-lg sm:text-2xl font-headline font-bold glass border-white/10 hover:bg-primary/20 hover:text-white transition-all active:scale-90 rounded-xl",
+              "h-10 sm:h-14 text-lg sm:text-2xl font-headline font-bold glass border-white/10 hover:bg-primary/20 hover:text-white transition-all active:scale-90 rounded-xl",
               val === 'C' && "text-destructive hover:bg-destructive/20 border-destructive/20"
             )}
             onClick={() => handleInput(val === 'C' ? '.' : val.toString())}

@@ -41,12 +41,9 @@ import { useUser, useFirestore } from '@/firebase';
 
 type View = 'hub' | 'play' | 'profile' | 'leaderboard';
 
-// Helper to generate a solvable sliding puzzle shuffle locally
 function getSlidingShuffle(size: number) {
   const count = size * size;
   let arr = Array.from({ length: count }, (_, i) => (i + 1) % count);
-  
-  // Perform random valid moves from solved state to guarantee solvability
   let emptyIdx = count - 1;
   for (let i = 0; i < 400; i++) {
     const row = Math.floor(emptyIdx / size);
@@ -56,7 +53,6 @@ function getSlidingShuffle(size: number) {
     if (row < size - 1) neighbors.push(emptyIdx + size);
     if (col > 0) neighbors.push(emptyIdx - 1);
     if (col < size - 1) neighbors.push(emptyIdx + 1);
-    
     const target = neighbors[Math.floor(Math.random() * neighbors.length)];
     [arr[emptyIdx], arr[target]] = [arr[target], arr[emptyIdx]];
     emptyIdx = target;
@@ -124,7 +120,6 @@ export default function UltimatePuzzlify() {
           data = result.puzzleData;
           if (type !== 'Sliding Puzzle') solution = result.solution;
         } catch (aiError) {
-          console.warn("Using local generator fallback");
           if (type === 'Sliding Puzzle') {
             data = getSlidingShuffle(size);
           } else if (type === 'Memory Grid') {
@@ -134,14 +129,13 @@ export default function UltimatePuzzlify() {
             data = [...selected, ...selected].sort(() => Math.random() - 0.5).join(',');
             solution = "MATCHED";
           } else {
-            // Sudoku fallback variety
             const banks = [
                 "53..7....6..195....98....6.8...6...34..8.3..17...2...6.6....28....419..5....8..79",
                 ".94...13..............76..2.8..1.....32.........2...6.....8.4......6...3.7.4.9...",
                 "....7..2.8.......6.1.2.5...9.54....8.........3....85.1...3.2.8.4.......9.7..6...."
             ];
             data = banks[Math.floor(Math.random() * banks.length)];
-            solution = "WIN"; // Boards handle internal solution checking or use "WIN" signal
+            solution = "WIN";
           }
         }
       }
@@ -230,19 +224,19 @@ export default function UltimatePuzzlify() {
 
   if (view === 'hub') {
     return (
-      <div className="min-h-screen p-4 sm:p-8 md:p-12 max-w-7xl mx-auto space-y-12 animate-in fade-in duration-700">
-        <header className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
-          <div className="flex items-center gap-5">
-            <div className="size-16 rounded-2xl glass violet-glow flex items-center justify-center violet-pulse">
-              <span className="text-3xl font-headline font-bold text-violet-400">UP</span>
+      <div className="min-h-screen p-4 sm:p-8 md:p-12 max-w-7xl mx-auto space-y-8 sm:space-y-12 animate-in fade-in duration-700">
+        <header className="flex flex-col md:flex-row items-center md:items-center justify-between gap-6 text-center md:text-left">
+          <div className="flex flex-col md:flex-row items-center gap-5">
+            <div className="size-16 sm:size-20 rounded-2xl glass violet-glow flex items-center justify-center violet-pulse">
+              <span className="text-3xl sm:text-4xl font-headline font-bold text-violet-400">UP</span>
             </div>
             <div>
-              <h1 className="text-3xl sm:text-4xl font-headline font-bold text-white tracking-tighter">ULTIMATE PUZZLIFY</h1>
-              <p className="game-status-label">Premium Multi Puzzles</p>
+              <h1 className="text-3xl sm:text-5xl font-headline font-bold text-white tracking-tighter">ULTIMATE PUZZLIFY</h1>
+              <p className="game-status-label mt-1">Premium Multi Puzzles</p>
             </div>
           </div>
           <div className="flex items-center gap-4 w-full md:w-auto">
-            <div className="glass px-6 py-3 rounded-2xl flex items-center gap-3 flex-1 md:flex-none">
+            <div className="glass px-6 py-3 rounded-2xl flex items-center gap-3 flex-1 md:flex-none justify-center md:justify-start">
               <Zap className="text-violet-400 size-5" />
               <span className="font-mono font-bold text-xl">{userStats.totalShards}</span>
             </div>
@@ -252,49 +246,49 @@ export default function UltimatePuzzlify() {
           </div>
         </header>
 
-        <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card className="md:col-span-2 glass border-none p-8 rounded-[2rem] relative overflow-hidden group">
-            <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform hidden sm:block">
+        <section className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <Card className="lg:col-span-2 glass border-none p-6 sm:p-10 rounded-[2rem] relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform hidden lg:block">
               <Sparkles className="size-48 text-violet-400" />
             </div>
-            <div className="relative z-10">
+            <div className="relative z-10 flex flex-col items-center lg:items-start text-center lg:text-left">
               <div className="flex items-center gap-2 text-violet-400 mb-4">
                 <TrendingUp className="size-5" />
                 <span className="game-status-label">Protocol Active</span>
               </div>
-              <h2 className="text-3xl sm:text-5xl font-headline font-bold mb-4">Neural Weaving</h2>
-              <p className="text-muted-foreground mb-8 max-w-md">Generate unique logical threads daily. Master the mesh to earn premium shards.</p>
-              <Button className="rounded-xl px-10 h-14 bg-violet-600 hover:bg-violet-500 violet-glow text-lg font-headline font-bold uppercase tracking-widest" onClick={() => startNewGame('Sudoku')}>
+              <h2 className="text-4xl sm:text-6xl font-headline font-bold mb-4 tracking-tight">Neural Weaving</h2>
+              <p className="text-muted-foreground mb-8 max-w-md text-lg">Generate unique logical threads daily. Master the mesh to earn premium shards.</p>
+              <Button className="rounded-xl px-12 h-16 bg-violet-600 hover:bg-violet-500 violet-glow text-xl font-headline font-bold uppercase tracking-widest transition-all active:scale-95" onClick={() => startNewGame('Sudoku')}>
                 Initialize Today
               </Button>
             </div>
           </Card>
 
-          <Card className="glass border-none p-8 rounded-[2rem] flex flex-col justify-between gap-6">
+          <Card className="glass border-none p-8 rounded-[2rem] flex flex-col justify-between gap-8">
             <div>
-              <div className="flex items-center gap-2 mb-4">
+              <div className="flex items-center gap-2 mb-4 justify-center lg:justify-start">
                 <Activity className="size-4 text-violet-400" />
                 <h3 className="game-status-label">Difficulty Protocol</h3>
               </div>
               <Select value={pDiff} onValueChange={setPDiff}>
-                <SelectTrigger className="bg-white/5 border-none h-16 rounded-2xl text-xl font-headline font-bold">
+                <SelectTrigger className="bg-white/5 border-none h-16 rounded-2xl text-xl font-headline font-bold focus:ring-2 focus:ring-violet-500/50">
                   <SelectValue />
                 </SelectTrigger>
-                <SelectContent className="glass">
-                  <SelectItem value="Easy" className="font-headline">Novice</SelectItem>
-                  <SelectItem value="Medium" className="font-headline">Adept</SelectItem>
-                  <SelectItem value="Hard" className="font-headline">Expert (4x4 Matrix)</SelectItem>
-                  <SelectItem value="Expert" className="font-headline">Grandmaster (6x6 Matrix)</SelectItem>
+                <SelectContent className="glass border-white/10">
+                  <SelectItem value="Easy" className="font-headline text-lg">Novice</SelectItem>
+                  <SelectItem value="Medium" className="font-headline text-lg">Adept</SelectItem>
+                  <SelectItem value="Hard" className="font-headline text-lg">Expert (4x4 Matrix)</SelectItem>
+                  <SelectItem value="Expert" className="font-headline text-lg">Grandmaster (6x6 Matrix)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             <div className="space-y-4">
-              <div className="flex justify-between game-status-label">
+              <div className="flex justify-between game-status-label px-1">
                 <span>Progress Matrix</span>
                 <span className="text-violet-400">{userStats.puzzlesSolved} SOLVED</span>
               </div>
-              <div className="h-2 w-full bg-white/5 rounded-full overflow-hidden">
-                <div className="h-full bg-violet-600 rounded-full" style={{ width: `${Math.min(100, (userStats.puzzlesSolved / 10) * 100)}%` }} />
+              <div className="h-3 w-full bg-white/5 rounded-full overflow-hidden">
+                <div className="h-full bg-violet-600 rounded-full transition-all duration-1000" style={{ width: `${Math.min(100, (userStats.puzzlesSolved / 10) * 100)}%` }} />
               </div>
             </div>
           </Card>
@@ -302,25 +296,25 @@ export default function UltimatePuzzlify() {
 
         {categories.map((cat, idx) => (
           <section key={idx} className="space-y-6">
-            <h2 className="text-2xl font-headline font-bold flex items-center gap-3 uppercase tracking-tighter">
-              {idx === 0 ? <Gamepad2 className="text-violet-400" /> : <Search className="text-pink-400" />}
+            <h2 className="text-2xl font-headline font-bold flex items-center gap-3 uppercase tracking-tighter justify-center lg:justify-start">
+              {idx === 0 ? <Gamepad2 className="text-violet-400 size-6" /> : <Search className="text-pink-400 size-6" />}
               {cat.title}
             </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {cat.games.map((g) => (
                 <Card 
                   key={g.id} 
                   onClick={() => startNewGame(g.id)}
                   className="glass-card border-none rounded-[2rem] p-8 group cursor-pointer relative transition-all active:scale-95"
                 >
-                  <div className={cn("size-14 rounded-2xl glass mb-6 flex items-center justify-center group-hover:scale-110 transition-transform", g.color)}>
-                    <g.icon className="size-8" />
+                  <div className={cn("size-16 rounded-2xl glass mb-6 flex items-center justify-center group-hover:scale-110 transition-transform", g.color)}>
+                    <g.icon className="size-10" />
                   </div>
-                  <CardTitle className="text-xl font-headline mb-1 uppercase tracking-wider">{g.name}</CardTitle>
+                  <CardTitle className="text-2xl font-headline mb-1 uppercase tracking-wider">{g.name}</CardTitle>
                   <CardDescription className="game-status-label opacity-60">
                     Neural Thread
                   </CardDescription>
-                  <ChevronRight className="absolute bottom-8 right-8 opacity-0 group-hover:opacity-100 transition-all translate-x-[-10px] group-hover:translate-x-0" />
+                  <ChevronRight className="absolute bottom-8 right-8 opacity-0 group-hover:opacity-100 transition-all -translate-x-3 group-hover:translate-x-0 size-6" />
                 </Card>
               ))}
             </div>
@@ -329,14 +323,14 @@ export default function UltimatePuzzlify() {
 
         {loading && (
           <div className="fixed inset-0 z-[100] glass flex items-center justify-center animate-in fade-in duration-500 backdrop-blur-3xl">
-            <div className="text-center p-8">
-              <div className="size-24 glass rounded-3xl mx-auto flex items-center justify-center violet-glow mb-8 animate-pulse">
-                <Cpu className="size-12 text-violet-400" />
+            <div className="text-center p-8 max-w-lg w-full">
+              <div className="size-28 sm:size-32 glass rounded-3xl mx-auto flex items-center justify-center violet-glow mb-10 animate-pulse">
+                <Cpu className="size-14 text-violet-400" />
               </div>
-              <h2 className="game-title">WEAVING NEURAL MESH</h2>
-              <p className="game-status-label mt-4">Initializing Logic Protocol...</p>
-              <div className="mt-8 flex gap-2 justify-center">
-                {[1,2,3,4].map(i => <div key={i} className="size-2.5 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: `${i*0.15}s` }} />)}
+              <h2 className="text-4xl sm:text-6xl font-headline font-bold text-gradient uppercase tracking-tighter">WEAVING NEURAL MESH</h2>
+              <p className="game-status-label mt-6 text-lg">Initializing Logic Protocol...</p>
+              <div className="mt-10 flex gap-3 justify-center">
+                {[1,2,3,4].map(i => <div key={i} className="size-3 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: `${i*0.15}s` }} />)}
               </div>
             </div>
           </div>
@@ -350,53 +344,53 @@ export default function UltimatePuzzlify() {
     : (activeSession?.type === 'Memory Grid' ? (activeSession?.difficulty === 'Expert' ? 6 : 4) : 0);
 
   return (
-    <div className="min-h-screen flex flex-col animate-in fade-in duration-500">
-      <nav className="glass sticky top-0 z-50 px-6 py-4 flex items-center justify-between backdrop-blur-2xl border-b border-white/5">
-        <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={() => setView('hub')} className="glass hover:bg-destructive/10 text-muted-foreground hover:text-destructive size-10">
-            <ArrowLeft className="size-5" />
+    <div className="min-h-screen flex flex-col animate-in fade-in duration-500 bg-background overflow-x-hidden">
+      <nav className="glass sticky top-0 z-50 px-4 sm:px-8 py-4 flex items-center justify-between backdrop-blur-2xl border-b border-white/5">
+        <div className="flex items-center gap-3 sm:gap-6">
+          <Button variant="ghost" size="icon" onClick={() => setView('hub')} className="glass hover:bg-destructive/10 text-muted-foreground hover:text-destructive size-10 sm:size-12 rounded-xl">
+            <ArrowLeft className="size-5 sm:size-6" />
           </Button>
           <div>
-            <h2 className="text-lg font-headline font-bold text-violet-400 uppercase tracking-tighter">{activeSession?.type}</h2>
-            <div className="flex gap-2 game-status-label">
+            <h2 className="text-lg sm:text-2xl font-headline font-bold text-violet-400 uppercase tracking-tighter truncate max-w-[120px] sm:max-w-none">{activeSession?.type}</h2>
+            <div className="flex gap-2 game-status-label text-[10px] sm:text-xs">
               <span>{activeSession?.difficulty}</span>
-              <span className="text-violet-400">SYNCED</span>
+              <span className="text-violet-400 hidden sm:inline">SYNCED</span>
             </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-8">
-          <div className="flex flex-col items-end hidden sm:flex">
-            <div className="flex items-center gap-2 font-mono text-xl text-violet-400 font-bold">
-              <Timer className="size-4" /> {formatTime(elapsedSeconds)}
+        <div className="flex items-center gap-4 sm:gap-10">
+          <div className="flex flex-col items-end">
+            <div className="flex items-center gap-1.5 font-mono text-lg sm:text-2xl text-violet-400 font-bold">
+              <Timer className="size-4 sm:size-5" /> {formatTime(elapsedSeconds)}
             </div>
-            <span className="game-status-label">RUNTIME</span>
+            <span className="game-status-label text-[9px] sm:text-[10px]">RUNTIME</span>
           </div>
           <div className="flex flex-col items-end">
-            <div className="font-mono text-xl text-primary font-bold">{activeSession?.moves}</div>
-            <span className="game-status-label">OPERATIONS</span>
+            <div className="font-mono text-lg sm:text-2xl text-primary font-bold">{activeSession?.moves}</div>
+            <span className="game-status-label text-[9px] sm:text-[10px]">OPS</span>
           </div>
-          <Button variant="ghost" size="icon" className="glass size-10 hover:text-violet-400 transition-colors" onClick={() => startNewGame(activeSession?.type || 'Sudoku')}>
-            <RotateCcw className="size-4" />
+          <Button variant="ghost" size="icon" className="glass size-10 sm:size-12 rounded-xl hover:text-violet-400 transition-colors" onClick={() => startNewGame(activeSession?.type || 'Sudoku')}>
+            <RotateCcw className="size-5" />
           </Button>
         </div>
       </nav>
 
-      <main className="flex-1 flex flex-col items-center justify-center p-6 relative">
+      <main className="flex-1 flex flex-col items-center justify-center p-4 sm:p-10 relative">
         {showWin && (
           <div className="fixed inset-0 z-[60] glass flex flex-col items-center justify-center animate-in zoom-in duration-500 p-6 backdrop-blur-3xl">
-            <div className="glass p-12 rounded-[3rem] text-center violet-glow border-violet-400/30 max-w-xl w-full">
-              <div className="size-32 rounded-full glass mx-auto mb-8 flex items-center justify-center violet-pulse">
-                <Trophy className="size-16 text-amber-400" />
+            <div className="glass p-8 sm:p-16 rounded-[3rem] text-center violet-glow border-violet-400/30 max-w-xl w-full">
+              <div className="size-24 sm:size-32 rounded-full glass mx-auto mb-8 flex items-center justify-center violet-pulse">
+                <Trophy className="size-12 sm:size-16 text-amber-400" />
               </div>
-              <h2 className="game-title mb-2">MATRIX SOLVED</h2>
-              <p className="game-status-label mb-8">Logic Synchronized Successfully</p>
-              <div className="text-violet-300 font-mono text-4xl mb-12 font-bold">
+              <h2 className="text-4xl sm:text-6xl font-headline font-bold text-gradient mb-2 uppercase tracking-tighter">MATRIX SOLVED</h2>
+              <p className="game-status-label mb-8 text-lg">Logic Synchronized Successfully</p>
+              <div className="text-violet-300 font-mono text-4xl sm:text-6xl mb-12 font-bold tracking-tighter">
                 +{calculateReward(activeSession?.difficulty || 'Easy', elapsedSeconds)} SHARDS
               </div>
               <div className="flex flex-col sm:flex-row gap-4">
-                <Button className="flex-1 h-16 rounded-2xl glass hover:bg-white/10 text-lg font-headline font-bold uppercase tracking-widest" onClick={() => setView('hub')}>BACK TO HUB</Button>
-                <Button className="flex-1 h-16 rounded-2xl bg-violet-600 hover:bg-violet-500 violet-glow text-lg font-headline font-bold uppercase tracking-widest" onClick={() => startNewGame(activeSession?.type || 'Sudoku')}>NEXT MATRIX</Button>
+                <Button className="flex-1 h-16 rounded-2xl glass hover:bg-white/10 text-xl font-headline font-bold uppercase tracking-widest" onClick={() => setView('hub')}>BACK TO HUB</Button>
+                <Button className="flex-1 h-16 rounded-2xl bg-violet-600 hover:bg-violet-500 violet-glow text-xl font-headline font-bold uppercase tracking-widest" onClick={() => startNewGame(activeSession?.type || 'Sudoku')}>NEXT MATRIX</Button>
               </div>
             </div>
           </div>
@@ -404,23 +398,23 @@ export default function UltimatePuzzlify() {
 
         {showGameOver && (
           <div className="fixed inset-0 z-[60] glass flex flex-col items-center justify-center animate-in fade-in duration-500 p-6 backdrop-blur-3xl">
-            <div className="glass p-12 rounded-[3rem] text-center border-destructive/30 max-w-xl w-full">
-              <div className="size-32 rounded-full glass border-destructive/50 mx-auto mb-8 flex items-center justify-center">
-                <Skull className="size-16 text-destructive" />
+            <div className="glass p-8 sm:p-16 rounded-[3rem] text-center border-destructive/30 max-w-xl w-full">
+              <div className="size-24 sm:size-32 rounded-full glass border-destructive/50 mx-auto mb-8 flex items-center justify-center">
+                <Skull className="size-12 sm:size-16 text-destructive" />
               </div>
-              <h2 className="game-over-title mb-2">PROTOCOL FAILED</h2>
-              <p className="game-status-label text-destructive mb-12">Neural Thread Disconnected</p>
+              <h2 className="text-4xl sm:text-6xl font-headline font-bold text-gradient-destructive mb-2 uppercase tracking-tighter">PROTOCOL FAILED</h2>
+              <p className="game-status-label text-destructive mb-12 text-lg">Neural Thread Disconnected</p>
               <div className="flex flex-col sm:flex-row gap-4">
-                <Button className="flex-1 h-16 rounded-2xl glass hover:bg-white/10 text-lg font-headline font-bold uppercase tracking-widest" onClick={() => setView('hub')}>BACK TO HUB</Button>
-                <Button className="flex-1 h-16 rounded-2xl bg-destructive hover:bg-destructive/80 text-lg font-headline font-bold uppercase tracking-widest flex items-center justify-center gap-2" onClick={() => startNewGame(activeSession?.type || 'Sudoku')}>
-                  <RefreshCw className="size-5" /> RETRY PROTOCOL
+                <Button className="flex-1 h-16 rounded-2xl glass hover:bg-white/10 text-xl font-headline font-bold uppercase tracking-widest" onClick={() => setView('hub')}>BACK TO HUB</Button>
+                <Button className="flex-1 h-16 rounded-2xl bg-destructive hover:bg-destructive/80 text-xl font-headline font-bold uppercase tracking-widest flex items-center justify-center gap-3" onClick={() => startNewGame(activeSession?.type || 'Sudoku')}>
+                  <RefreshCw className="size-6" /> RETRY PROTOCOL
                 </Button>
               </div>
             </div>
           </div>
         )}
 
-        <div className="w-full max-w-4xl glass p-8 md:p-12 rounded-[3rem] shadow-2xl relative overflow-auto max-h-[calc(100vh-140px)]">
+        <div className="w-full max-w-4xl glass p-4 sm:p-12 rounded-[2rem] sm:rounded-[3rem] shadow-2xl relative overflow-auto max-h-[calc(100vh-140px)] scrollbar-hide">
           {activeSession && activeSession.type === 'Sudoku' && <SudokuBoard key={activeSession.id} initialData={activeSession.data} userProgress={activeSession.userProgress} onUpdate={handleUpdate} />}
           {activeSession && activeSession.type === 'Sliding Puzzle' && <SlidingBoard key={activeSession.id} initialData={activeSession.data} size={boardSize} onUpdate={handleUpdate} />}
           {activeSession && activeSession.type === 'Memory Grid' && <MemoryBoard key={activeSession.id} initialData={activeSession.data} size={boardSize} onUpdate={handleUpdate} />}
