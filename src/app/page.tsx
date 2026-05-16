@@ -1,10 +1,13 @@
+
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { generateUniquePuzzle } from '@/ai/flows/generate-unique-puzzle';
 import { SudokuBoard } from '@/components/puzzle/SudokuBoard';
 import { SlidingBoard } from '@/components/puzzle/SlidingBoard';
 import { MemoryBoard } from '@/components/puzzle/MemoryBoard';
+import { Game2048 } from '@/components/puzzle/Game2048';
+import { TicTacToeAI } from '@/components/puzzle/TicTacToeAI';
 import { HintMentor } from '@/components/puzzle/HintMentor';
 import { Button } from '@/components/ui/button';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
@@ -16,120 +19,101 @@ import {
   LayoutGrid, 
   Timer, 
   Trophy, 
-  ArrowLeft, 
-  Plus, 
-  LogOut, 
   RotateCcw,
-  CheckCircle2,
-  PlayCircle,
   Zap,
-  Star,
   Sparkles,
   Cpu,
   Activity,
-  ShieldCheck,
-  TrendingUp,
-  Clock
+  LogOut,
+  ChevronRight,
+  User,
+  Hash,
+  XCircle,
+  Shapes,
+  Gamepad2,
+  Lock
 } from 'lucide-react';
-import { GameSession, saveSession, getAllSessions, deleteSession, getUserStats, addReward, calculateReward, UserStats } from '@/lib/game-utils';
+import { GameSession, saveSession, getAllSessions, getUserStats, addReward, calculateReward, UserStats } from '@/lib/game-utils';
 import { cn } from '@/lib/utils';
-import Image from 'next/image';
-import { PlaceHolderImages } from '@/lib/placeholder-images';
 import { toast } from '@/hooks/use-toast';
 
-type View = 'hub' | 'play' | 'analytics';
+type View = 'hub' | 'play' | 'profile' | 'leaderboard';
 
-export default function EnigmaNexus() {
+export default function UltimatePuzzlify() {
   const [view, setView] = useState<View>('hub');
   const [activeSession, setActiveSession] = useState<GameSession | null>(null);
   const [sessions, setSessions] = useState<GameSession[]>([]);
   const [userStats, setUserStats] = useState<UserStats>({ totalShards: 0, puzzlesSolved: 0 });
   const [loading, setLoading] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
-  
   const [pDiff, setPDiff] = useState<string>('Medium');
-  const [showCelebration, setShowCelebration] = useState(false);
-  const [lastReward, setLastReward] = useState(0);
+  const [showWin, setShowWin] = useState(false);
 
   useEffect(() => {
     setSessions(getAllSessions());
     setUserStats(getUserStats());
   }, [view]);
 
-  // Optimized Timer Logic: Only restarts when game status or ID changes
   useEffect(() => {
-    const isRunning = view === 'play' && activeSession && !activeSession.isCompleted;
-    
-    if (isRunning) {
-      timerRef.current = setInterval(() => {
-        setElapsedSeconds(prev => prev + 1);
-      }, 1000);
-    } else {
-      if (timerRef.current) clearInterval(timerRef.current);
+    let interval: NodeJS.Timeout;
+    if (view === 'play' && activeSession && !activeSession.isCompleted) {
+      interval = setInterval(() => setElapsedSeconds(s => s + 1), 1000);
     }
+    return () => clearInterval(interval);
+  }, [view, activeSession]);
 
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [view, activeSession?.id, activeSession?.isCompleted]);
-
-  const formatTime = (seconds: number) => {
-    const h = Math.floor(seconds / 3600);
-    const m = Math.floor((seconds % 3600) / 60);
-    const s = seconds % 60;
-    return [h, m, s].map(v => v < 10 ? "0" + v : v).join(":");
+  const formatTime = (s: number) => {
+    const m = Math.floor(s / 60);
+    const rs = s % 60;
+    return `${m}:${rs < 10 ? '0' : ''}${rs}`;
   };
 
   const startNewGame = async (type: string) => {
     setLoading(true);
     try {
-      const result = await generateUniquePuzzle({ puzzleType: type, difficulty: pDiff });
+      // Logic for AI games vs Logic games
+      const needsAI = ['Sudoku', 'Sliding Puzzle', 'Memory Grid'].includes(type);
+      let data = "";
+      let solution = "";
+      
+      if (needsAI) {
+        const result = await generateUniquePuzzle({ puzzleType: type, difficulty: pDiff });
+        data = result.puzzleData;
+        solution = result.solution;
+      }
+
       const newSession: GameSession = {
-        id: Math.random().toString(36).substr(2, 9),
+        id: Math.random().toString(36).substring(7),
         type: type as any,
         difficulty: pDiff,
-        data: result.puzzleData,
-        solution: result.solution,
-        userProgress: result.puzzleData,
+        data,
+        solution,
+        userProgress: data,
         moves: 0,
         startTime: Date.now(),
         lastPlayed: Date.now(),
         timeSpent: 0,
         isCompleted: false
       };
-      saveSession(newSession);
+      
       setActiveSession(newSession);
       setElapsedSeconds(0);
-      setShowCelebration(false);
+      setShowWin(false);
       setView('play');
     } catch (err) {
-      toast({
-        variant: "destructive",
-        title: "Logic Stream Failure",
-        description: "The AI weaver encountered a logical knot. Re-initializing...",
-      });
+      toast({ variant: "destructive", title: "Connection Error", description: "The matrix rejected our sync request." });
     } finally {
       setLoading(false);
     }
   };
 
-  const resumeGame = (session: GameSession) => {
-    setActiveSession(session);
-    setElapsedSeconds(session.timeSpent || 0);
-    setShowCelebration(session.isCompleted || false);
-    setView('play');
-  };
-
   const handleUpdate = (progress: string, moveIncrement = 1) => {
     if (!activeSession || activeSession.isCompleted) return;
     
-    const isNowCompleted = progress === activeSession.solution;
-    
+    const isNowCompleted = progress === activeSession.solution || progress === "WIN";
     const updated: GameSession = { 
       ...activeSession, 
       userProgress: progress, 
-      lastPlayed: Date.now(),
       moves: activeSession.moves + moveIncrement,
       timeSpent: elapsedSeconds,
       isCompleted: isNowCompleted
@@ -137,421 +121,189 @@ export default function EnigmaNexus() {
     
     if (isNowCompleted) {
       const reward = calculateReward(activeSession.difficulty, elapsedSeconds);
-      updated.earnedShards = reward;
-      setLastReward(reward);
       addReward(reward);
-      setShowCelebration(true);
-      toast({
-        title: "Matrix Synchronized!",
-        description: `Successfully woven pattern. Reward: ${reward} Shards.`,
-      });
+      setShowWin(true);
+      toast({ title: "Victory!", description: `Matrix Deciphered. +${reward} Shards.` });
     }
 
     setActiveSession(updated);
     saveSession(updated);
   };
 
-  const resetPuzzle = () => {
-    if (!activeSession) return;
-    const updated = { ...activeSession, userProgress: activeSession.data, moves: 0, timeSpent: 0, isCompleted: false };
-    setActiveSession(updated);
-    setElapsedSeconds(0);
-    setShowCelebration(false);
-    saveSession(updated);
-  };
-
-  const exitToHub = () => {
-    if (activeSession) {
-      saveSession({ ...activeSession, timeSpent: elapsedSeconds });
-    }
-    setView('hub');
-  };
-
-  const hubPuzzles = [
-    { id: 'Sudoku', name: 'Sudoku', icon: Grid3X3, desc: '9x9 Number Logic Grid', image: PlaceHolderImages?.[0], color: 'text-primary' },
-    { id: 'Sliding Puzzle', name: 'Sliding Tiles', icon: Layers, desc: '3x3 Kinetic Reordering', image: PlaceHolderImages?.[1], color: 'text-accent' },
-    { id: 'Memory Grid', name: 'Memory Grid', icon: LayoutGrid, desc: '4x4 Pattern Matching', image: PlaceHolderImages?.[2], color: 'text-yellow-400' },
+  const games = [
+    { id: 'Sudoku', name: 'Sudoku', icon: Grid3X3, color: 'text-violet-400', category: 'Logic' },
+    { id: 'Sliding Puzzle', name: 'Sliding Tiles', icon: Layers, color: 'text-pink-400', category: 'Logic' },
+    { id: 'Memory Grid', name: 'Memory', icon: LayoutGrid, color: 'text-purple-400', category: 'Logic' },
+    { id: '2048', name: '2048', icon: Hash, color: 'text-amber-400', category: 'Math' },
+    { id: 'TicTacToeAI', name: 'Tic Tac Toe', icon: XCircle, color: 'text-cyan-400', category: 'Strategy' },
+    { id: 'Math', name: 'Math Pulse', icon: Activity, color: 'text-emerald-400', category: 'Math', locked: true },
+    { id: 'Word', name: 'Word Crypt', icon: Shapes, color: 'text-indigo-400', category: 'Strategy', locked: true },
   ];
 
   if (view === 'hub') {
     return (
-      <div className="min-h-screen bg-background text-foreground selection:bg-primary/30 p-4 sm:p-8">
-        <header className="max-w-6xl mx-auto flex flex-col sm:flex-row items-center justify-between mb-12 gap-6">
-          <div className="flex items-center gap-4">
-            <div className="size-12 rounded-xl bg-primary flex items-center justify-center neon-glow">
-              <Brain className="text-white size-8" />
+      <div className="min-h-screen p-6 sm:p-12 max-w-7xl mx-auto space-y-12">
+        <header className="flex flex-col md:flex-row items-start md:items-center justify-between gap-8">
+          <div className="flex items-center gap-5">
+            <div className="size-16 rounded-2xl glass violet-glow flex items-center justify-center violet-pulse">
+              <span className="text-3xl font-bold text-violet-400">UP</span>
             </div>
             <div>
-              <h1 className="text-3xl font-headline font-bold tracking-tight text-primary">ENIGMA NEXUS</h1>
-              <div className="flex items-center gap-3">
-                <p className="text-sm text-muted-foreground uppercase tracking-widest font-medium">Cognitive Hub</p>
-                <div className="flex items-center gap-1 bg-accent/20 text-accent px-2 py-0.5 rounded-full text-xs font-bold border border-accent/30">
-                  <Zap className="size-3" /> {userStats.totalShards} SHARDS
-                </div>
-              </div>
+              <h1 className="text-4xl font-headline font-bold text-white tracking-tight">ULTIMATE PUZZLIFY</h1>
+              <p className="text-muted-foreground font-medium tracking-wide">PREMIUM MULTI PUZZLES</p>
             </div>
           </div>
-          <div className="flex gap-4">
-            <div className="flex flex-col items-center bg-card/50 px-4 py-1 rounded-xl border border-primary/10">
-              <span className="text-[10px] text-muted-foreground uppercase font-bold">Complexity</span>
-              <Select value={pDiff} onValueChange={setPDiff}>
-                <SelectTrigger className="h-8 border-none bg-transparent font-bold focus:ring-0">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="Easy">Easy</SelectItem>
-                  <SelectItem value="Medium">Medium</SelectItem>
-                  <SelectItem value="Hard">Hard</SelectItem>
-                  <SelectItem value="Expert">Expert</SelectItem>
-                </SelectContent>
-              </Select>
+          <div className="flex items-center gap-4">
+            <div className="glass px-6 py-3 rounded-2xl flex items-center gap-3">
+              <Zap className="text-violet-400 size-5" />
+              <span className="font-mono font-bold text-xl">{userStats.totalShards}</span>
             </div>
-            <Button variant="outline" onClick={() => setView('analytics')} className="gap-2 border-primary/20 hover:bg-primary/10 h-auto py-2">
-              <Trophy className="size-4 text-accent" /> Achievement
+            <Button variant="ghost" size="icon" className="glass size-12 rounded-2xl" onClick={() => setView('profile')}>
+              <User className="size-6 text-violet-400" />
             </Button>
           </div>
         </header>
 
-        <main className="max-w-6xl mx-auto space-y-16">
-          <section>
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-2xl font-headline flex items-center gap-3">
-                <Sparkles className="text-primary size-6" /> Available Matrices
-              </h2>
-              <p className="text-xs text-muted-foreground hidden sm:block">Select a logic pattern to begin synchronization.</p>
+        <section className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="md:col-span-2 glass p-8 rounded-3xl relative overflow-hidden group">
+            <div className="absolute top-0 right-0 p-8 opacity-10 group-hover:scale-110 transition-transform">
+              <Sparkles className="size-32 text-violet-400" />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-              {hubPuzzles.map((p) => (
-                <Card 
-                  key={p.id} 
-                  className="group relative overflow-hidden border-primary/10 transition-all hover:border-primary/40 hover:-translate-y-2 hover:shadow-2xl hover:shadow-primary/20 cursor-pointer bg-card/50"
-                  onClick={() => startNewGame(p.id)}
-                >
-                  <div className="h-48 relative bg-muted">
-                    {p.image && (
-                      <Image 
-                        src={p.image.imageUrl} 
-                        alt={p.name} 
-                        fill 
-                        className="object-cover opacity-40 group-hover:opacity-80 transition-all duration-700 group-hover:scale-110" 
-                        data-ai-hint={p.image.imageHint}
-                      />
-                    )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-background via-transparent to-transparent" />
-                    <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-                      <div className="bg-primary text-white p-4 rounded-full shadow-2xl scale-75 group-hover:scale-100 transition-transform">
-                        <PlayCircle className="size-10" />
-                      </div>
-                    </div>
-                  </div>
-                  <CardHeader className="relative -mt-12 backdrop-blur-sm bg-background/40">
-                    <div className={cn(
-                      "size-14 rounded-2xl flex items-center justify-center mb-4 transition-transform group-hover:scale-110 shadow-2xl bg-secondary",
-                      p.color
-                    )}>
-                      <p.icon className="size-8" />
-                    </div>
-                    <CardTitle className="font-headline text-xl">{p.name}</CardTitle>
-                    <CardDescription>{p.desc}</CardDescription>
-                  </CardHeader>
-                </Card>
-              ))}
+            <h2 className="text-3xl font-headline font-bold mb-4">Daily AI Challenge</h2>
+            <p className="text-muted-foreground mb-8 max-w-md">Solve today's unique pattern and earn double Shards. New challenges every 24 hours.</p>
+            <div className="flex items-center gap-4">
+              <Button className="rounded-xl px-8 bg-violet-600 hover:bg-violet-500 violet-glow" onClick={() => startNewGame('Sudoku')}>
+                Decipher Now
+              </Button>
+              <div className="text-sm font-mono text-violet-400 bg-violet-400/10 px-4 py-2 rounded-lg border border-violet-400/20">
+                REWARD: 500 SHARDS
+              </div>
             </div>
-          </section>
+          </div>
+          <div className="glass p-8 rounded-3xl flex flex-col justify-between">
+            <div>
+              <h3 className="text-sm font-bold uppercase tracking-widest text-muted-foreground mb-4">Adaptive Protocol</h3>
+              <Select value={pDiff} onValueChange={setPDiff}>
+                <SelectTrigger className="bg-white/5 border-none h-14 rounded-xl text-xl font-bold">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="glass">
+                  <SelectItem value="Easy">Novice</SelectItem>
+                  <SelectItem value="Medium">Adept</SelectItem>
+                  <SelectItem value="Hard">Expert</SelectItem>
+                  <SelectItem value="Expert">Master</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <p className="text-xs text-muted-foreground mt-4 italic">Harder puzzles yield premium multipliers.</p>
+          </div>
+        </section>
 
-          {sessions.length > 0 && (
-            <section className="bg-card/20 p-8 rounded-3xl border border-primary/5">
-              <h2 className="text-2xl font-headline mb-8 flex items-center gap-3">
-                <Activity className="text-accent size-6" /> Active Sessions
-              </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-                {sessions.sort((a,b) => b.lastPlayed - a.lastPlayed).map((s) => (
-                  <div 
-                    key={s.id} 
-                    className={cn(
-                      "flex flex-col p-5 bg-card border rounded-2xl transition-all group relative",
-                      s.isCompleted ? "border-accent/20 bg-accent/5" : "border-primary/10 hover:border-primary/40"
-                    )}
-                  >
-                    <div className="flex items-center justify-between mb-4">
-                      <div className={cn(
-                        "px-2 py-1 rounded text-[10px] font-bold uppercase tracking-widest",
-                        s.isCompleted ? "bg-accent/20 text-accent" : "bg-primary/20 text-primary"
-                      )}>
-                        {s.isCompleted ? "Solved" : "Active"}
-                      </div>
-                      <Button 
-                        variant="ghost" 
-                        size="icon" 
-                        className="size-6 text-muted-foreground hover:text-destructive"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          deleteSession(s.id);
-                          setSessions(getAllSessions());
-                        }}
-                      >
-                        ×
-                      </Button>
-                    </div>
-                    
-                    <div className="flex-1 cursor-pointer" onClick={() => resumeGame(s)}>
-                      <p className="font-bold text-lg mb-1">{s.type}</p>
-                      <div className="flex items-center gap-3 text-xs text-muted-foreground mb-4">
-                        <span className="flex items-center gap-1"><Star className="size-3" /> {s.difficulty}</span>
-                        <span className="flex items-center gap-1"><Layers className="size-3" /> {s.moves} moves</span>
-                      </div>
-                      
-                      <Button className="w-full bg-secondary hover:bg-primary hover:text-white transition-colors gap-2">
-                        {s.isCompleted ? "Review Results" : "Continue"} <PlayCircle className="size-4" />
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-          )}
-        </main>
-        
+        <section>
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-2xl font-headline font-bold flex items-center gap-3 uppercase tracking-tighter">
+              <Gamepad2 className="text-violet-400" /> Matrix Selection
+            </h2>
+          </div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {games.map((g) => (
+              <Card 
+                key={g.id} 
+                onClick={() => !g.locked && startNewGame(g.id)}
+                className={cn(
+                  "glass-card border-none rounded-3xl p-6 group cursor-pointer relative",
+                  g.locked && "opacity-50 grayscale"
+                )}
+              >
+                {g.locked && <Lock className="absolute top-4 right-4 size-5 text-muted-foreground" />}
+                <div className={cn("size-14 rounded-2xl glass mb-6 flex items-center justify-center group-hover:scale-110 transition-transform", g.color)}>
+                  <g.icon className="size-8" />
+                </div>
+                <CardTitle className="mb-1 text-lg">{g.name}</CardTitle>
+                <CardDescription className="text-xs uppercase tracking-widest">{g.category}</CardDescription>
+                <ChevronRight className="absolute bottom-6 right-6 opacity-0 group-hover:opacity-100 transition-all translate-x-[-10px] group-hover:translate-x-0" />
+              </Card>
+            ))}
+          </div>
+        </section>
+
         {loading && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-xl animate-in fade-in duration-500">
-            <div className="text-center relative max-w-sm px-6">
-              <div className="size-32 mx-auto relative mb-10">
-                <div className="absolute inset-0 border-4 border-primary/20 rounded-full" />
-                <div className="absolute inset-0 border-4 border-primary rounded-full border-t-transparent animate-spin" />
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <Cpu className="size-12 text-primary animate-pulse" />
-                </div>
+          <div className="fixed inset-0 z-50 glass flex items-center justify-center animate-in fade-in duration-300">
+            <div className="text-center">
+              <div className="size-24 glass rounded-3xl mx-auto flex items-center justify-center violet-glow mb-8 animate-pulse">
+                <Cpu className="size-12 text-violet-400" />
               </div>
-              
-              <div className="space-y-4">
-                <h3 className="text-3xl font-headline font-bold text-primary tracking-tight">NEURAL WEAVING</h3>
-                <div className="h-1 w-full bg-primary/10 rounded-full overflow-hidden">
-                  <div className="h-full bg-primary animate-[loading_2s_ease-in-out_infinite]" style={{ width: '40%' }} />
-                </div>
-                <div className="flex flex-col gap-2">
-                  <p className="text-sm text-muted-foreground font-mono flex items-center justify-center gap-2">
-                    <Activity className="size-3 text-accent" /> SYNTHESIZING {pDiff.toUpperCase()} MATRIX
-                  </p>
-                  <p className="text-[10px] text-primary/60 font-bold tracking-widest uppercase">Initializing Cognitive Node...</p>
-                </div>
+              <h2 className="text-3xl font-headline font-bold text-gradient">WEAVING NEURAL MESH</h2>
+              <div className="mt-4 flex gap-1 justify-center">
+                {[1,2,3].map(i => <div key={i} className="size-2 rounded-full bg-violet-400 animate-bounce" style={{ animationDelay: `${i*0.2}s` }} />)}
               </div>
             </div>
           </div>
         )}
-
-        <style jsx global>{`
-          @keyframes loading {
-            0% { transform: translateX(-100%); }
-            50% { transform: translateX(100%); }
-            100% { transform: translateX(-100%); }
-          }
-        `}</style>
-      </div>
-    );
-  }
-
-  if (view === 'analytics') {
-    const totalTime = sessions.reduce((acc, s) => acc + (s.timeSpent || 0), 0);
-    const avgMoves = sessions.length > 0 ? Math.floor(sessions.reduce((acc, s) => acc + s.moves, 0) / sessions.length) : 0;
-
-    return (
-      <div className="min-h-screen bg-background p-4 sm:p-12 overflow-y-auto">
-        <div className="max-w-4xl mx-auto">
-           <Button variant="ghost" className="mb-8 gap-2 text-muted-foreground hover:text-primary" onClick={() => setView('hub')}>
-              <ArrowLeft className="size-4" /> Return to Hub
-           </Button>
-           
-           <div className="flex items-center gap-4 mb-12">
-             <div className="size-14 rounded-2xl bg-accent flex items-center justify-center">
-                <Trophy className="text-background size-8" />
-             </div>
-             <div>
-                <h1 className="text-4xl font-headline font-bold">Cognitive Evolution</h1>
-                <p className="text-muted-foreground">Historical data from Enigma Nexus synchronization.</p>
-             </div>
-           </div>
-
-           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
-             <Card className="bg-card/50 border-accent/20 overflow-hidden relative group">
-                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                  <Zap className="size-12" />
-                </div>
-                <CardHeader>
-                  <CardDescription className="uppercase font-bold tracking-tighter text-[10px]">Accumulated Wealth</CardDescription>
-                  <CardTitle className="text-4xl font-mono text-accent">{userStats.totalShards}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-xs text-muted-foreground">Nexus Shards earned across all successful operations.</p>
-                </CardContent>
-             </Card>
-
-             <Card className="bg-card/50 border-primary/20 overflow-hidden relative group">
-                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                  <ShieldCheck className="size-12" />
-                </div>
-                <CardHeader>
-                  <CardDescription className="uppercase font-bold tracking-tighter text-[10px]">Matrices Deciphered</CardDescription>
-                  <CardTitle className="text-4xl font-mono text-primary">{userStats.puzzlesSolved}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-xs text-muted-foreground">Total number of logic grids successfully solved.</p>
-                </CardContent>
-             </Card>
-
-             <Card className="bg-card/50 border-white/10 overflow-hidden relative group">
-                <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
-                  <Clock className="size-12" />
-                </div>
-                <CardHeader>
-                  <CardDescription className="uppercase font-bold tracking-tighter text-[10px]">Neural Processing</CardDescription>
-                  <CardTitle className="text-4xl font-mono">{formatTime(totalTime)}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-xs text-muted-foreground">Total focused time spent in the Enigma matrices.</p>
-                </CardContent>
-             </Card>
-           </div>
-           
-           <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-             <Card className="bg-card/50 border-primary/10 backdrop-blur-md">
-               <CardHeader className="flex flex-row items-center justify-between">
-                 <CardTitle className="text-lg">Move Efficiency</CardTitle>
-                 <TrendingUp className="text-accent size-5" />
-               </CardHeader>
-               <CardContent className="space-y-6">
-                 <div className="flex justify-between items-end">
-                    <span className="text-sm text-muted-foreground">Average moves per session:</span>
-                    <span className="text-2xl font-mono font-bold">{avgMoves}</span>
-                 </div>
-                 <div className="h-2 w-full bg-secondary rounded-full overflow-hidden">
-                    <div className="h-full bg-primary w-[65%]" />
-                 </div>
-                 <p className="text-xs text-muted-foreground italic">Efficiency is currently 12% higher than your last 10 sessions.</p>
-               </CardContent>
-             </Card>
-             
-             <Card className="bg-card/50 border-primary/10 backdrop-blur-md">
-               <CardHeader>
-                 <CardTitle className="text-lg">Matrix Breakdown</CardTitle>
-               </CardHeader>
-               <CardContent className="space-y-4">
-                 {hubPuzzles.map(p => {
-                    const count = sessions.filter(s => s.type === p.id && s.isCompleted).length;
-                    return (
-                      <div key={p.id} className="flex items-center gap-4">
-                        <div className={cn("size-8 rounded-lg flex items-center justify-center bg-secondary", p.color)}>
-                          <p.icon className="size-4" />
-                        </div>
-                        <div className="flex-1">
-                          <div className="flex justify-between text-xs mb-1">
-                            <span>{p.name}</span>
-                            <span>{count} solved</span>
-                          </div>
-                          <div className="h-1.5 w-full bg-secondary rounded-full overflow-hidden">
-                            <div className={cn("h-full", p.id === 'Sudoku' ? 'bg-primary w-2/3' : p.id === 'Sliding Puzzle' ? 'bg-accent w-1/3' : 'bg-yellow-400 w-1/2')} />
-                          </div>
-                        </div>
-                      </div>
-                    );
-                 })}
-               </CardContent>
-             </Card>
-           </div>
-        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background text-foreground flex flex-col">
-      <nav className="p-4 sm:p-6 border-b border-primary/5 flex items-center justify-between backdrop-blur-sm sticky top-0 z-40 bg-background/80">
+    <div className="min-h-screen flex flex-col">
+      <nav className="glass sticky top-0 z-50 px-6 py-4 flex items-center justify-between backdrop-blur-2xl">
         <div className="flex items-center gap-4">
-          <Button variant="ghost" size="icon" onClick={exitToHub} className="hover:bg-destructive/10 hover:text-destructive">
+          <Button variant="ghost" size="icon" onClick={() => setView('hub')} className="glass hover:bg-destructive/10 text-muted-foreground hover:text-destructive">
             <LogOut className="size-5" />
           </Button>
           <div className="hidden sm:block">
-            <h2 className="text-lg font-headline font-bold text-primary">{activeSession?.type}</h2>
-            <p className="text-xs text-muted-foreground uppercase tracking-wider">{activeSession?.difficulty} Protocol</p>
+            <h2 className="text-lg font-bold text-violet-400 uppercase tracking-tighter">{activeSession?.type}</h2>
+            <div className="flex gap-2 text-[10px] uppercase font-bold text-muted-foreground">
+              <span>{activeSession?.difficulty} PROTOCOL</span>
+              <span>•</span>
+              <span className="text-violet-400">SYNCED</span>
+            </div>
           </div>
         </div>
 
-        <div className="flex items-center gap-3 sm:gap-6">
+        <div className="flex items-center gap-8">
           <div className="flex flex-col items-end">
-             <div className="flex items-center gap-2 text-accent font-mono font-bold">
-               <Timer className="size-4" />
-               {formatTime(elapsedSeconds)}
-             </div>
-             <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Elapsed</p>
+            <div className="flex items-center gap-2 font-mono text-xl text-violet-400 font-bold">
+              <Timer className="size-4" /> {formatTime(elapsedSeconds)}
+            </div>
+            <span className="text-[10px] uppercase font-bold text-muted-foreground">RUNTIME</span>
           </div>
-          
-          <div className="h-8 w-px bg-primary/10" />
-
           <div className="flex flex-col items-end">
-             <div className="text-primary font-mono font-bold">
-               {activeSession?.moves || 0}
-             </div>
-             <p className="text-[10px] text-muted-foreground uppercase tracking-widest">Moves</p>
+            <div className="font-mono text-xl text-primary font-bold">{activeSession?.moves}</div>
+            <span className="text-[10px] uppercase font-bold text-muted-foreground">OPERATIONS</span>
           </div>
-
-          <Button variant="outline" size="icon" onClick={resetPuzzle} className="ml-2 border-primary/10 hover:bg-primary/5">
+          <Button variant="ghost" size="icon" className="glass size-10" onClick={() => setElapsedSeconds(0)}>
             <RotateCcw className="size-4" />
           </Button>
         </div>
       </nav>
 
-      <main className="flex-1 flex flex-col items-center justify-center p-4 relative overflow-hidden">
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 size-[600px] bg-primary/5 blur-[120px] rounded-full -z-10" />
-
-        {showCelebration && (
-          <div className="mb-8 text-center animate-in fade-in zoom-in slide-in-from-top-10 duration-700 z-10">
-             <div className="inline-flex flex-col items-center gap-2 bg-accent/20 text-accent px-10 py-6 rounded-[2rem] border-2 border-accent/40 shadow-[0_0_50px_rgba(189,74,52,0.3)] mb-4 backdrop-blur-md">
-               <div className="flex items-center gap-3 text-3xl font-headline font-bold">
-                 <Trophy className="size-8" /> LOGIC REWARD
-               </div>
-               <p className="text-accent/80 font-mono text-xl">+{activeSession?.earnedShards || lastReward} NEXUS SHARDS</p>
-               <div className="flex gap-1 mt-2">
-                 {[1,2,3,4,5].map(i => <Star key={i} className="size-4 fill-accent" />)}
-               </div>
-             </div>
-             <div className="flex justify-center gap-4">
-                <Button onClick={exitToHub} variant="outline" className="border-accent/20 hover:bg-accent/10">Return to Hub</Button>
-                <Button onClick={() => startNewGame(activeSession?.type || 'Sudoku')} className="bg-accent text-white hover:bg-accent/90">Next Matrix</Button>
-             </div>
+      <main className="flex-1 flex flex-col items-center justify-center p-6 relative overflow-hidden">
+        {showWin && (
+          <div className="fixed inset-0 z-40 glass flex flex-col items-center justify-center animate-in zoom-in duration-500">
+            <div className="glass p-12 rounded-[3rem] text-center violet-glow border-violet-400/30 max-w-md w-full">
+              <Trophy className="size-24 text-amber-400 mx-auto mb-6 animate-bounce" />
+              <h2 className="text-4xl font-headline font-bold mb-2">MATRIX SOLVED</h2>
+              <p className="text-violet-300 font-mono text-2xl mb-8">+{calculateReward(activeSession?.difficulty || 'Easy', elapsedSeconds)} SHARDS</p>
+              <div className="flex gap-4">
+                <Button className="flex-1 h-14 rounded-2xl glass hover:bg-white/10" onClick={() => setView('hub')}>BACK TO HUB</Button>
+                <Button className="flex-1 h-14 rounded-2xl bg-violet-600 hover:bg-violet-500" onClick={() => startNewGame(activeSession?.type || 'Sudoku')}>NEXT MATRIX</Button>
+              </div>
+            </div>
           </div>
         )}
 
-        <div className={cn(
-          "w-full max-w-2xl bg-card/40 border border-primary/10 rounded-3xl p-6 sm:p-12 shadow-2xl backdrop-blur-sm transition-all duration-700 relative",
-          showCelebration ? "border-accent/40 shadow-accent/20 scale-105" : "hover:border-primary/30"
-        )}>
-          {activeSession?.type === 'Sudoku' && (
-            <SudokuBoard 
-              initialData={activeSession.data} 
-              userProgress={activeSession.userProgress}
-              onUpdate={handleUpdate}
-            />
-          )}
-          {activeSession?.type === 'Sliding Puzzle' && (
-            <SlidingBoard 
-              initialData={activeSession.data}
-              onUpdate={handleUpdate}
-            />
-          )}
-          {activeSession?.type === 'Memory Grid' && (
-            <MemoryBoard 
-              initialData={activeSession.data}
-              onUpdate={handleUpdate}
-            />
-          )}
+        <div className="w-full max-w-2xl glass p-8 sm:p-12 rounded-[3rem] shadow-2xl relative">
+          {activeSession?.type === 'Sudoku' && <SudokuBoard initialData={activeSession.data} userProgress={activeSession.userProgress} onUpdate={handleUpdate} />}
+          {activeSession?.type === 'Sliding Puzzle' && <SlidingBoard initialData={activeSession.data} onUpdate={handleUpdate} />}
+          {activeSession?.type === 'Memory Grid' && <MemoryBoard initialData={activeSession.data} onUpdate={handleUpdate} />}
+          {activeSession?.type === '2048' && <Game2048 onUpdate={handleUpdate} />}
+          {activeSession?.type === 'TicTacToeAI' && <TicTacToeAI onUpdate={handleUpdate} />}
         </div>
       </main>
 
       {activeSession && !activeSession.isCompleted && (
-        <HintMentor 
-          puzzleType={activeSession.type} 
-          difficulty={activeSession.difficulty} 
-          gameState={activeSession.userProgress}
-        />
+        <HintMentor puzzleType={activeSession.type} difficulty={activeSession.difficulty} gameState={activeSession.userProgress} />
       )}
     </div>
   );

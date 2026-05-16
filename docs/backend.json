@@ -1,0 +1,65 @@
+
+{
+  "entities": {
+    "UserProfile": {
+      "title": "User Profile",
+      "description": "Premium user account data",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "displayName": { "type": "string" },
+        "shards": { "type": "number" },
+        "totalSolved": { "type": "number" },
+        "level": { "type": "number" },
+        "achievements": { "type": "array", "items": { "type": "string" } },
+        "lastLogin": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "shards"]
+    },
+    "GameSession": {
+      "title": "Game Session",
+      "description": "Active or completed game state for cloud sync",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "type": { "type": "string", "enum": ["Sudoku", "Sliding Puzzle", "Memory Grid", "2048", "Tic Tac Toe AI", "Word Puzzle", "Math Puzzle"] },
+        "difficulty": { "type": "string" },
+        "data": { "type": "string" },
+        "userProgress": { "type": "string" },
+        "moves": { "type": "number" },
+        "timeSpent": { "type": "number" },
+        "isCompleted": { "type": "boolean" },
+        "timestamp": { "type": "number" }
+      }
+    },
+    "LeaderboardEntry": {
+      "title": "Leaderboard Entry",
+      "description": "Ranked score for a specific game",
+      "type": "object",
+      "properties": {
+        "gameType": { "type": "string" },
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "score": { "type": "number" },
+        "timestamp": { "type": "number" }
+      }
+    }
+  },
+  "auth": {
+    "providers": ["google.com", "anonymous"]
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "#/backend/entities/UserProfile",
+      "description": "User account details and stats"
+    },
+    "/sessions/{sessionId}": {
+      "schema": "#/backend/entities/GameSession",
+      "description": "Cloud-synced game states"
+    },
+    "/leaderboard/{entryId}": {
+      "schema": "#/backend/entities/LeaderboardEntry",
+      "description": "Global competitive rankings"
+    }
+  }
+}
