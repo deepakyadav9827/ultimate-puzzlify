@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
@@ -25,7 +24,10 @@ import {
   PlayCircle,
   Zap,
   Star,
-  Sparkles
+  Sparkles,
+  Cpu,
+  Activity,
+  ShieldCheck
 } from 'lucide-react';
 import { GameSession, saveSession, getAllSessions, deleteSession, getUserStats, addReward, calculateReward, UserStats } from '@/lib/game-utils';
 import { cn } from '@/lib/utils';
@@ -100,8 +102,8 @@ export default function EnigmaNexus() {
     } catch (err) {
       toast({
         variant: "destructive",
-        title: "Matrix Generation Failed",
-        description: "The AI weaver encountered a logical knot. Please try again."
+        title: "Logic Stream Failure",
+        description: "The AI weaver encountered a logical knot. Re-initializing...",
       });
     } finally {
       setLoading(false);
@@ -136,8 +138,8 @@ export default function EnigmaNexus() {
       addReward(reward);
       setShowCelebration(true);
       toast({
-        title: "Logic Pattern Synchronized!",
-        description: `You earned ${reward} Nexus Shards!`,
+        title: "Matrix Synchronized!",
+        description: `Successfully woven pattern. Reward: ${reward} Shards.`,
       });
     }
 
@@ -178,7 +180,7 @@ export default function EnigmaNexus() {
             <div>
               <h1 className="text-3xl font-headline font-bold tracking-tight text-primary">ENIGMA NEXUS</h1>
               <div className="flex items-center gap-3">
-                <p className="text-sm text-muted-foreground uppercase tracking-widest font-medium">Cognitive Logic Hub</p>
+                <p className="text-sm text-muted-foreground uppercase tracking-widest font-medium">Cognitive Hub</p>
                 <div className="flex items-center gap-1 bg-accent/20 text-accent px-2 py-0.5 rounded-full text-xs font-bold border border-accent/30">
                   <Zap className="size-3" /> {userStats.totalShards} SHARDS
                 </div>
@@ -186,22 +188,22 @@ export default function EnigmaNexus() {
             </div>
           </div>
           <div className="flex gap-4">
-            <div className="flex flex-col items-center bg-card/50 px-4 py-2 rounded-xl border border-primary/10">
-              <span className="text-[10px] text-muted-foreground uppercase font-bold">Difficulty Level</span>
+            <div className="flex flex-col items-center bg-card/50 px-4 py-1 rounded-xl border border-primary/10">
+              <span className="text-[10px] text-muted-foreground uppercase font-bold">Complexity</span>
               <Select value={pDiff} onValueChange={setPDiff}>
                 <SelectTrigger className="h-8 border-none bg-transparent font-bold focus:ring-0">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Easy">Beginner</SelectItem>
-                  <SelectItem value="Medium">Skilled</SelectItem>
-                  <SelectItem value="Hard">Expert</SelectItem>
-                  <SelectItem value="Expert">Grandmaster</SelectItem>
+                  <SelectItem value="Easy">Easy</SelectItem>
+                  <SelectItem value="Medium">Medium</SelectItem>
+                  <SelectItem value="Hard">Hard</SelectItem>
+                  <SelectItem value="Expert">Expert</SelectItem>
                 </SelectContent>
               </Select>
             </div>
-            <Button variant="outline" onClick={() => setView('analytics')} className="gap-2 border-primary/20 hover:bg-primary/10">
-              <Trophy className="size-4 text-accent" /> Achievement Data
+            <Button variant="outline" onClick={() => setView('analytics')} className="gap-2 border-primary/20 hover:bg-primary/10 h-auto py-2">
+              <Trophy className="size-4 text-accent" /> Achievement
             </Button>
           </div>
         </header>
@@ -210,9 +212,9 @@ export default function EnigmaNexus() {
           <section>
             <div className="flex items-center justify-between mb-8">
               <h2 className="text-2xl font-headline flex items-center gap-3">
-                <Sparkles className="text-primary size-6" /> Instant Initialization
+                <Sparkles className="text-primary size-6" /> Available Matrices
               </h2>
-              <p className="text-xs text-muted-foreground italic">Click any card to start generating a matrix.</p>
+              <p className="text-xs text-muted-foreground hidden sm:block">Select a logic pattern to begin synchronization.</p>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
               {hubPuzzles.map((p) => (
@@ -246,7 +248,7 @@ export default function EnigmaNexus() {
                       <p.icon className="size-8" />
                     </div>
                     <CardTitle className="font-headline text-xl">{p.name}</CardTitle>
-                    <CardDescription className="line-clamp-2">{p.desc}</CardDescription>
+                    <CardDescription>{p.desc}</CardDescription>
                   </CardHeader>
                 </Card>
               ))}
@@ -256,7 +258,7 @@ export default function EnigmaNexus() {
           {sessions.length > 0 && (
             <section className="bg-card/20 p-8 rounded-3xl border border-primary/5">
               <h2 className="text-2xl font-headline mb-8 flex items-center gap-3">
-                <Timer className="text-accent size-6" /> Residual Session Log
+                <Activity className="text-accent size-6" /> Active Sessions
               </h2>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
                 {sessions.sort((a,b) => b.lastPlayed - a.lastPlayed).map((s) => (
@@ -272,7 +274,7 @@ export default function EnigmaNexus() {
                         "px-2 py-1 rounded text-[10px] font-bold uppercase tracking-widest",
                         s.isCompleted ? "bg-accent/20 text-accent" : "bg-primary/20 text-primary"
                       )}>
-                        {s.isCompleted ? "Synchronized" : "In Progress"}
+                        {s.isCompleted ? "Solved" : "Active"}
                       </div>
                       <Button 
                         variant="ghost" 
@@ -296,7 +298,7 @@ export default function EnigmaNexus() {
                       </div>
                       
                       <Button className="w-full bg-secondary hover:bg-primary hover:text-white transition-colors gap-2">
-                        {s.isCompleted ? "Review Results" : "Resume Logic"} <PlayCircle className="size-4" />
+                        {s.isCompleted ? "Review Results" : "Continue"} <PlayCircle className="size-4" />
                       </Button>
                     </div>
                   </div>
@@ -307,16 +309,48 @@ export default function EnigmaNexus() {
         </main>
         
         {loading && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/80 backdrop-blur-md">
-            <div className="text-center">
-              <div className="size-20 bg-primary/20 rounded-full flex items-center justify-center mb-6 animate-pulse mx-auto">
-                <Brain className="size-10 text-primary animate-bounce" />
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-xl animate-in fade-in duration-500">
+            <div className="text-center relative max-w-sm px-6">
+              <div className="size-32 mx-auto relative mb-10">
+                <div className="absolute inset-0 border-4 border-primary/20 rounded-full" />
+                <div className="absolute inset-0 border-4 border-primary rounded-full border-t-transparent animate-spin" />
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <Cpu className="size-12 text-primary animate-pulse" />
+                </div>
               </div>
-              <h3 className="text-2xl font-headline font-bold text-primary mb-2">Weaving Logic Threads...</h3>
-              <p className="text-muted-foreground">Synthesizing a unique {pDiff} matrix for your consciousness.</p>
+              
+              <div className="space-y-4">
+                <h3 className="text-3xl font-headline font-bold text-primary tracking-tight">NEURAL WEAVING</h3>
+                <div className="h-1 w-full bg-primary/10 rounded-full overflow-hidden">
+                  <div className="h-full bg-primary animate-[loading_2s_ease-in-out_infinite]" style={{ width: '40%' }} />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <p className="text-sm text-muted-foreground font-mono flex items-center justify-center gap-2">
+                    <Activity className="size-3 text-accent" /> SYNTHESIZING {pDiff.toUpperCase()} MATRIX
+                  </p>
+                  <p className="text-[10px] text-primary/60 font-bold tracking-widest uppercase">Initializing Cognitive Node...</p>
+                </div>
+              </div>
+              
+              {/* Decorative scan lines */}
+              <div className="absolute -inset-10 pointer-events-none overflow-hidden opacity-20">
+                <div className="h-1 w-full bg-primary/30 blur-sm animate-[scan_3s_linear_infinite]" />
+              </div>
             </div>
           </div>
         )}
+
+        <style jsx global>{`
+          @keyframes loading {
+            0% { transform: translateX(-100%); }
+            50% { transform: translateX(100%); }
+            100% { transform: translateX(-100%); }
+          }
+          @keyframes scan {
+            0% { transform: translateY(-100%); }
+            100% { transform: translateY(400%); }
+          }
+        `}</style>
       </div>
     );
   }
@@ -330,18 +364,18 @@ export default function EnigmaNexus() {
            </Button>
            <h1 className="text-4xl font-headline font-bold mb-4">Cognitive Evolution</h1>
            <div className="flex gap-4 mb-12">
-             <div className="bg-accent/20 border border-accent/30 p-4 rounded-2xl flex items-center gap-4">
-                <Zap className="size-8 text-accent" />
+             <div className="bg-accent/20 border border-accent/30 p-6 rounded-2xl flex items-center gap-4 flex-1">
+                <Zap className="size-10 text-accent" />
                 <div>
                   <p className="text-[10px] text-muted-foreground uppercase font-bold">Total Shards</p>
-                  <p className="text-2xl font-bold font-mono">{userStats.totalShards}</p>
+                  <p className="text-3xl font-bold font-mono">{userStats.totalShards}</p>
                 </div>
              </div>
-             <div className="bg-primary/20 border border-primary/30 p-4 rounded-2xl flex items-center gap-4">
-                <CheckCircle2 className="size-8 text-primary" />
+             <div className="bg-primary/20 border border-primary/30 p-6 rounded-2xl flex items-center gap-4 flex-1">
+                <ShieldCheck className="size-10 text-primary" />
                 <div>
-                  <p className="text-[10px] text-muted-foreground uppercase font-bold">Solved Puzzles</p>
-                  <p className="text-2xl font-bold font-mono">{userStats.puzzlesSolved}</p>
+                  <p className="text-[10px] text-muted-foreground uppercase font-bold">Matrices Solved</p>
+                  <p className="text-3xl font-bold font-mono">{userStats.puzzlesSolved}</p>
                 </div>
              </div>
            </div>
@@ -374,7 +408,7 @@ export default function EnigmaNexus() {
           </Button>
           <div className="hidden sm:block">
             <h2 className="text-lg font-headline font-bold text-primary">{activeSession?.type}</h2>
-            <p className="text-xs text-muted-foreground uppercase tracking-wider">{activeSession?.difficulty} Complexity</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider">{activeSession?.difficulty} Protocol</p>
           </div>
         </div>
 
@@ -407,10 +441,10 @@ export default function EnigmaNexus() {
         <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 size-[600px] bg-primary/5 blur-[120px] rounded-full -z-10" />
 
         {showCelebration && (
-          <div className="mb-8 text-center animate-in fade-in zoom-in slide-in-from-top-10 duration-700">
-             <div className="inline-flex flex-col items-center gap-2 bg-accent/20 text-accent px-10 py-6 rounded-[2rem] border-2 border-accent/40 shadow-[0_0_50px_rgba(189,74,52,0.3)] mb-4">
+          <div className="mb-8 text-center animate-in fade-in zoom-in slide-in-from-top-10 duration-700 z-10">
+             <div className="inline-flex flex-col items-center gap-2 bg-accent/20 text-accent px-10 py-6 rounded-[2rem] border-2 border-accent/40 shadow-[0_0_50px_rgba(189,74,52,0.3)] mb-4 backdrop-blur-md">
                <div className="flex items-center gap-3 text-3xl font-headline font-bold">
-                 <Trophy className="size-8" /> REWARD SYNCHRONIZED
+                 <Trophy className="size-8" /> LOGIC REWARD
                </div>
                <p className="text-accent/80 font-mono text-xl">+{activeSession?.earnedShards || lastReward} NEXUS SHARDS</p>
                <div className="flex gap-1 mt-2">
@@ -425,7 +459,7 @@ export default function EnigmaNexus() {
         )}
 
         <div className={cn(
-          "w-full max-w-2xl bg-card/40 border border-primary/10 rounded-3xl p-6 sm:p-12 shadow-2xl backdrop-blur-sm transition-all duration-700",
+          "w-full max-w-2xl bg-card/40 border border-primary/10 rounded-3xl p-6 sm:p-12 shadow-2xl backdrop-blur-sm transition-all duration-700 relative",
           showCelebration ? "border-accent/40 shadow-accent/20 scale-105" : "hover:border-primary/30"
         )}>
           {activeSession?.type === 'Sudoku' && (
