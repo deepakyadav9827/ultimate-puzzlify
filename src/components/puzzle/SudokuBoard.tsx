@@ -1,7 +1,6 @@
-
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 
@@ -31,17 +30,16 @@ export function SudokuBoard({ initialData, userProgress, onUpdate }: SudokuBoard
     }
   };
 
-  const handleInput = (val: string) => {
+  const handleInput = useCallback((val: string) => {
     if (selectedCell === null) return;
-    if (grid[selectedCell] === val) return; // No change
+    if (grid[selectedCell] === val) return;
 
     const newGrid = [...grid];
     newGrid[selectedCell] = val;
     setGrid(newGrid);
     onUpdate(newGrid.join(''), 1);
-  };
+  }, [selectedCell, grid, onUpdate]);
 
-  // Keyboard support
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       if (selectedCell === null) return;
@@ -53,11 +51,11 @@ export function SudokuBoard({ initialData, userProgress, onUpdate }: SudokuBoard
     };
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [selectedCell, grid]);
+  }, [selectedCell, handleInput]);
 
   return (
     <div className="flex flex-col items-center gap-8 w-full max-w-md mx-auto">
-      <div className="grid grid-cols-9 gap-[1px] bg-border p-1 rounded-lg overflow-hidden neon-glow aspect-square w-full">
+      <div className="grid grid-cols-9 gap-[1px] bg-border p-[2px] rounded-lg overflow-hidden neon-glow aspect-square w-full">
         {grid.map((cell, i) => {
           const isFixed = initialData[i] !== '.';
           const isSelected = selectedCell === i;
@@ -72,11 +70,11 @@ export function SudokuBoard({ initialData, userProgress, onUpdate }: SudokuBoard
               key={i}
               onClick={() => handleCellClick(i)}
               className={cn(
-                "flex items-center justify-center bg-card text-lg font-medium cursor-pointer transition-all hover:bg-muted relative select-none",
-                isFixed ? "text-primary/60 font-bold" : "text-foreground",
+                "flex items-center justify-center bg-card text-lg font-medium cursor-pointer transition-all hover:bg-muted relative select-none h-full",
+                isFixed ? "text-primary/60 font-bold bg-secondary/20" : "text-foreground",
                 isSelected && "bg-primary/20 ring-2 ring-primary inset-0 z-10",
-                isSubgridRight && "border-r-2 border-r-primary/20",
-                isSubgridBottom && "border-b-2 border-b-primary/20"
+                isSubgridRight && "border-r-[3px] border-r-primary/40",
+                isSubgridBottom && "border-b-[3px] border-b-primary/40"
               )}
             >
               {cell === '.' ? '' : cell}
