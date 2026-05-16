@@ -46,7 +46,7 @@ export function SlidingBoard({ initialData, size = 3, onUpdate }: SlidingBoardPr
 
   return (
     <div 
-      className="grid gap-2 p-4 bg-muted/30 rounded-2xl glass violet-glow aspect-square w-full max-w-lg mx-auto"
+      className="grid gap-2 p-2 sm:p-4 bg-muted/30 rounded-2xl glass violet-glow aspect-square w-full max-w-2xl mx-auto"
       style={gridStyle}
     >
       {tiles.map((tile, i) => (

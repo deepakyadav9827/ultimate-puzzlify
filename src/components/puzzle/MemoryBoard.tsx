@@ -5,11 +5,11 @@ import { cn } from '@/lib/utils';
 
 interface MemoryBoardProps {
   initialData: string;
-  userProgress?: string;
+  size?: number;
   onUpdate: (progress: string, moves?: number) => void;
 }
 
-export function MemoryBoard({ initialData, onUpdate }: MemoryBoardProps) {
+export function MemoryBoard({ initialData, size = 4, onUpdate }: MemoryBoardProps) {
   const [items, setItems] = useState<string[]>([]);
   const [flipped, setFlipped] = useState<number[]>([]);
   const [solved, setSolved] = useState<number[]>([]);
@@ -55,8 +55,16 @@ export function MemoryBoard({ initialData, onUpdate }: MemoryBoardProps) {
     }
   };
 
+  // Dynamic grid styles based on size
+  const gridStyle = {
+    gridTemplateColumns: `repeat(${size}, minmax(0, 1fr))`,
+  };
+
   return (
-    <div className="grid grid-cols-4 gap-3 sm:gap-4 w-full max-w-md mx-auto aspect-square p-2">
+    <div 
+      className="grid gap-2 sm:gap-3 w-full max-w-2xl mx-auto aspect-square p-2"
+      style={gridStyle}
+    >
       {items.map((item, i) => {
         const isFlipped = flipped.includes(i) || solved.includes(i);
         const isMatched = solved.includes(i);
@@ -73,7 +81,8 @@ export function MemoryBoard({ initialData, onUpdate }: MemoryBoardProps) {
             )}>
               {/* Front (Hidden) */}
               <div className={cn(
-                "absolute inset-0 bg-secondary rounded-xl border border-primary/20 flex items-center justify-center text-primary/30 text-xl sm:text-2xl font-bold backface-hidden group-hover:border-primary/50 transition-colors",
+                "absolute inset-0 bg-secondary rounded-lg border border-primary/20 flex items-center justify-center text-primary/30 font-bold backface-hidden group-hover:border-primary/50 transition-colors",
+                size === 6 ? "text-lg" : "text-xl sm:text-2xl",
                 isMatched && "opacity-0 pointer-events-none"
               )}>
                 ?
@@ -81,7 +90,8 @@ export function MemoryBoard({ initialData, onUpdate }: MemoryBoardProps) {
               
               {/* Back (Revealed) */}
               <div className={cn(
-                "absolute inset-0 bg-primary/10 border-2 border-primary rounded-xl flex items-center justify-center text-2xl sm:text-4xl backface-hidden rotate-y-180",
+                "absolute inset-0 bg-primary/10 border-2 border-primary rounded-lg flex items-center justify-center backface-hidden rotate-y-180",
+                size === 6 ? "text-xl sm:text-3xl" : "text-2xl sm:text-4xl",
                 isMatched && "border-accent bg-accent/10 text-accent"
               )}>
                 {item}

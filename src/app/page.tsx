@@ -48,7 +48,7 @@ function getSlidingShuffle(size: number) {
   
   // Perform random valid moves from solved state to guarantee solvability
   let emptyIdx = count - 1;
-  for (let i = 0; i < 200; i++) {
+  for (let i = 0; i < 400; i++) {
     const row = Math.floor(emptyIdx / size);
     const col = emptyIdx % size;
     const neighbors = [];
@@ -108,6 +108,9 @@ export default function UltimatePuzzlify() {
       if (type === 'Sliding Puzzle') {
         size = pDiff === 'Expert' ? 6 : pDiff === 'Hard' ? 4 : 3;
         solution = Array.from({ length: size * size }, (_, i) => (i + 1) % (size * size)).join(',');
+      } else if (type === 'Memory Grid') {
+        size = pDiff === 'Expert' ? 6 : 4;
+        solution = "MATCHED";
       }
 
       const needsAI = ['Sudoku', 'Sliding Puzzle', 'Memory Grid'].includes(type);
@@ -119,20 +122,26 @@ export default function UltimatePuzzlify() {
             new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Timeout")), 8000))
           ]);
           data = result.puzzleData;
-          // For sliding puzzles, ensure we respect the dynamic size solution
           if (type !== 'Sliding Puzzle') solution = result.solution;
         } catch (aiError) {
           console.warn("Using local generator fallback");
           if (type === 'Sliding Puzzle') {
             data = getSlidingShuffle(size);
           } else if (type === 'Memory Grid') {
-            const emojis = "🍎,🍌,🍒,🥑,⭐,🌙,☀️,☁️,🐱,🐶,🦊,🐰,🦁,🐯,🐼,🐨".split(',');
-            const selected = emojis.sort(() => Math.random() - 0.5).slice(0, 8);
+            const symbols = "🍎,🍌,🍒,🥑,⭐,🌙,☀️,☁️,🐱,🐶,🦊,🐰,🦁,🐯,🐼,🐨,🐷,🐸,🐙,🦋,🦄,🐉,🍦,🍕,🎮,🚀,🌈,💎,🍀,🔥,❄️,🎭,🎸,⚽,🛸,👻".split(',');
+            const selectedCount = (size * size) / 2;
+            const selected = symbols.sort(() => Math.random() - 0.5).slice(0, selectedCount);
             data = [...selected, ...selected].sort(() => Math.random() - 0.5).join(',');
             solution = "MATCHED";
           } else {
-            data = "53..7....6..195....98....6.8...6...34..8.3..17...2...6.6....28....419..5....8..79";
-            solution = "534678912672195348198342567859761423426853791713924856961537284287419635345286179";
+            // Sudoku fallback variety
+            const banks = [
+                "53..7....6..195....98....6.8...6...34..8.3..17...2...6.6....28....419..5....8..79",
+                ".94...13..............76..2.8..1.....32.........2...6.....8.4......6...3.7.4.9...",
+                "....7..2.8.......6.1.2.5...9.54....8.........3....85.1...3.2.8.4.......9.7..6...."
+            ];
+            data = banks[Math.floor(Math.random() * banks.length)];
+            solution = "WIN"; // Boards handle internal solution checking or use "WIN" signal
           }
         }
       }
@@ -274,8 +283,8 @@ export default function UltimatePuzzlify() {
                 <SelectContent className="glass">
                   <SelectItem value="Easy" className="font-headline">Novice</SelectItem>
                   <SelectItem value="Medium" className="font-headline">Adept</SelectItem>
-                  <SelectItem value="Hard" className="font-headline">Expert (4x4)</SelectItem>
-                  <SelectItem value="Expert" className="font-headline">Grandmaster (6x6)</SelectItem>
+                  <SelectItem value="Hard" className="font-headline">Expert (4x4 Matrix)</SelectItem>
+                  <SelectItem value="Expert" className="font-headline">Grandmaster (6x6 Matrix)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -336,7 +345,9 @@ export default function UltimatePuzzlify() {
     );
   }
 
-  const slidingSize = activeSession?.difficulty === 'Expert' ? 6 : activeSession?.difficulty === 'Hard' ? 4 : 3;
+  const boardSize = activeSession?.type === 'Sliding Puzzle' 
+    ? (activeSession?.difficulty === 'Expert' ? 6 : activeSession?.difficulty === 'Hard' ? 4 : 3)
+    : (activeSession?.type === 'Memory Grid' ? (activeSession?.difficulty === 'Expert' ? 6 : 4) : 0);
 
   return (
     <div className="min-h-screen flex flex-col animate-in fade-in duration-500">
@@ -411,8 +422,8 @@ export default function UltimatePuzzlify() {
 
         <div className="w-full max-w-4xl glass p-8 md:p-12 rounded-[3rem] shadow-2xl relative overflow-auto max-h-[calc(100vh-140px)]">
           {activeSession && activeSession.type === 'Sudoku' && <SudokuBoard key={activeSession.id} initialData={activeSession.data} userProgress={activeSession.userProgress} onUpdate={handleUpdate} />}
-          {activeSession && activeSession.type === 'Sliding Puzzle' && <SlidingBoard key={activeSession.id} initialData={activeSession.data} size={slidingSize} onUpdate={handleUpdate} />}
-          {activeSession && activeSession.type === 'Memory Grid' && <MemoryBoard key={activeSession.id} initialData={activeSession.data} onUpdate={handleUpdate} />}
+          {activeSession && activeSession.type === 'Sliding Puzzle' && <SlidingBoard key={activeSession.id} initialData={activeSession.data} size={boardSize} onUpdate={handleUpdate} />}
+          {activeSession && activeSession.type === 'Memory Grid' && <MemoryBoard key={activeSession.id} initialData={activeSession.data} size={boardSize} onUpdate={handleUpdate} />}
           {activeSession && activeSession.type === '2048' && <Game2048 key={activeSession.id} onUpdate={handleUpdate} />}
           {activeSession && activeSession.type === 'TicTacToeAI' && <TicTacToeAI key={activeSession.id} onUpdate={handleUpdate} />}
         </div>
