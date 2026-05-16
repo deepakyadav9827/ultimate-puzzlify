@@ -5,16 +5,18 @@ import { cn } from '@/lib/utils';
 
 interface SlidingBoardProps {
   initialData: string;
+  size?: number;
   onUpdate: (progress: string) => void;
 }
 
-export function SlidingBoard({ initialData, onUpdate }: SlidingBoardProps) {
+export function SlidingBoard({ initialData, size = 3, onUpdate }: SlidingBoardProps) {
   const [tiles, setTiles] = useState<number[]>([]);
-  const size = 3;
 
   useEffect(() => {
     if (initialData) {
-      setTiles(initialData.split(',').map(Number));
+      // Ensure we parse the data correctly regardless of commas or spacing
+      const parsed = initialData.split(',').map(n => parseInt(n.trim(), 10));
+      setTiles(parsed);
     }
   }, [initialData]);
 
@@ -37,15 +39,26 @@ export function SlidingBoard({ initialData, onUpdate }: SlidingBoardProps) {
     }
   };
 
+  // Dynamic grid styles based on size
+  const gridStyle = {
+    gridTemplateColumns: `repeat(${size}, minmax(0, 1fr))`,
+  };
+
   return (
-    <div className="grid grid-cols-3 gap-3 p-4 bg-muted/30 rounded-2xl neon-glow aspect-square w-full max-w-md mx-auto">
+    <div 
+      className="grid gap-2 p-4 bg-muted/30 rounded-2xl glass violet-glow aspect-square w-full max-w-lg mx-auto"
+      style={gridStyle}
+    >
       {tiles.map((tile, i) => (
         <div
           key={i}
           onClick={() => moveTile(i)}
           className={cn(
-            "flex items-center justify-center text-3xl sm:text-4xl font-bold rounded-xl transition-all duration-300 transform",
-            tile === 0 ? "bg-transparent cursor-default" : "bg-card border border-primary/20 text-primary shadow-lg hover:scale-105 hover:bg-primary hover:text-white cursor-pointer select-none active:scale-95"
+            "flex items-center justify-center font-headline font-bold rounded-lg transition-all duration-300 transform",
+            tile === 0 ? "bg-transparent cursor-default" : "bg-card border border-primary/20 text-primary shadow-lg hover:scale-105 hover:bg-primary/20 hover:text-white cursor-pointer select-none active:scale-95",
+            size === 3 ? "text-3xl sm:text-4xl h-24 sm:h-32" : 
+            size === 4 ? "text-2xl sm:text-3xl h-16 sm:h-24" :
+            "text-lg sm:text-xl h-10 sm:h-14"
           )}
         >
           {tile !== 0 && tile}

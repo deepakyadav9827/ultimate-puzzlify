@@ -41,21 +41,28 @@ import { useUser, useFirestore } from '@/firebase';
 
 type View = 'hub' | 'play' | 'profile' | 'leaderboard';
 
-const FALLBACK_PUZZLES: Record<string, any> = {
-  'Sudoku': [
-    { data: "53..7....6..195....98....6.8...6...34..8.3..17...2...6.6....28....419..5....8..79", solution: "534678912672195348198342567859761423426853791713924856961537284287419635345286179" },
-    { data: ".94...13..............76..2.8..1.....32.........2...6.....8.4......6...3.7.4.9...", solution: "294358137618243597357917642485716239932584716761329485123895674849762351576431928" }
-  ],
-  'Sliding Puzzle': [
-    { data: "1,2,3,4,5,6,7,0,8", solution: "1,2,3,4,5,6,7,8,0" },
-    { data: "4,1,2,7,5,3,0,8,6", solution: "1,2,3,4,5,6,7,8,0" },
-    { data: "8,6,7,2,5,4,3,0,1", solution: "1,2,3,4,5,6,7,8,0" }
-  ],
-  'Memory Grid': [
-    { data: "🍎,🍌,🍎,🍌,🍒,🥑,🍒,🥑,⭐,🌙,⭐,🌙,☀️,☁️,☀️,☁️", solution: "MATCHED" },
-    { data: "🐱,🐶,🐱,🐶,🦊,🐰,🦊,🐰,🦁,🐯,🦁,🐯,🐼,🐨,🐼,🐨", solution: "MATCHED" }
-  ]
-};
+// Helper to generate a solvable sliding puzzle shuffle locally
+function getSlidingShuffle(size: number) {
+  const count = size * size;
+  let arr = Array.from({ length: count }, (_, i) => (i + 1) % count);
+  
+  // Perform random valid moves from solved state to guarantee solvability
+  let emptyIdx = count - 1;
+  for (let i = 0; i < 200; i++) {
+    const row = Math.floor(emptyIdx / size);
+    const col = emptyIdx % size;
+    const neighbors = [];
+    if (row > 0) neighbors.push(emptyIdx - size);
+    if (row < size - 1) neighbors.push(emptyIdx + size);
+    if (col > 0) neighbors.push(emptyIdx - 1);
+    if (col < size - 1) neighbors.push(emptyIdx + 1);
+    
+    const target = neighbors[Math.floor(Math.random() * neighbors.length)];
+    [arr[emptyIdx], arr[target]] = [arr[target], arr[emptyIdx]];
+    emptyIdx = target;
+  }
+  return arr.join(',');
+}
 
 export default function UltimatePuzzlify() {
   const { user } = useUser();
@@ -91,29 +98,42 @@ export default function UltimatePuzzlify() {
     setLoading(true);
     setShowWin(false);
     setShowGameOver(false);
-    
-    // Reset session briefly to force component remount and clear state
     setActiveSession(null);
 
     try {
-      const needsAI = ['Sudoku', 'Sliding Puzzle', 'Memory Grid'].includes(type);
       let data = "";
       let solution = "";
+      let size = 3;
+
+      if (type === 'Sliding Puzzle') {
+        size = pDiff === 'Expert' ? 6 : pDiff === 'Hard' ? 4 : 3;
+        solution = Array.from({ length: size * size }, (_, i) => (i + 1) % (size * size)).join(',');
+      }
+
+      const needsAI = ['Sudoku', 'Sliding Puzzle', 'Memory Grid'].includes(type);
       
       if (needsAI) {
         try {
           const result = await Promise.race([
             generateUniquePuzzle({ puzzleType: type, difficulty: pDiff }),
-            new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Timeout")), 10000))
+            new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Timeout")), 8000))
           ]);
           data = result.puzzleData;
-          solution = result.solution;
+          // For sliding puzzles, ensure we respect the dynamic size solution
+          if (type !== 'Sliding Puzzle') solution = result.solution;
         } catch (aiError) {
-          console.warn("Using local fallback bank for variety");
-          const bank = FALLBACK_PUZZLES[type] || FALLBACK_PUZZLES['Sudoku'];
-          const fallback = bank[Math.floor(Math.random() * bank.length)];
-          data = fallback.data;
-          solution = fallback.solution;
+          console.warn("Using local generator fallback");
+          if (type === 'Sliding Puzzle') {
+            data = getSlidingShuffle(size);
+          } else if (type === 'Memory Grid') {
+            const emojis = "🍎,🍌,🍒,🥑,⭐,🌙,☀️,☁️,🐱,🐶,🦊,🐰,🦁,🐯,🐼,🐨".split(',');
+            const selected = emojis.sort(() => Math.random() - 0.5).slice(0, 8);
+            data = [...selected, ...selected].sort(() => Math.random() - 0.5).join(',');
+            solution = "MATCHED";
+          } else {
+            data = "53..7....6..195....98....6.8...6...34..8.3..17...2...6.6....28....419..5....8..79";
+            solution = "534678912672195348198342567859761423426853791713924856961537284287419635345286179";
+          }
         }
       }
 
@@ -166,6 +186,11 @@ export default function UltimatePuzzlify() {
       const reward = calculateReward(activeSession.difficulty, elapsedSeconds);
       if (user && db) {
         updateCloudStats(db, user.uid, reward).then(stats => setUserStats(stats));
+      } else {
+        const stats = getUserStats();
+        const updatedStats = { ...stats, totalShards: stats.totalShards + reward, puzzlesSolved: stats.puzzlesSolved + 1 };
+        localStorage.setItem('up-user-stats-v1', JSON.stringify(updatedStats));
+        setUserStats(updatedStats);
       }
       setShowWin(true);
     }
@@ -249,8 +274,8 @@ export default function UltimatePuzzlify() {
                 <SelectContent className="glass">
                   <SelectItem value="Easy" className="font-headline">Novice</SelectItem>
                   <SelectItem value="Medium" className="font-headline">Adept</SelectItem>
-                  <SelectItem value="Hard" className="font-headline">Expert</SelectItem>
-                  <SelectItem value="Expert" className="font-headline">Grandmaster</SelectItem>
+                  <SelectItem value="Hard" className="font-headline">Expert (4x4)</SelectItem>
+                  <SelectItem value="Expert" className="font-headline">Grandmaster (6x6)</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -310,6 +335,8 @@ export default function UltimatePuzzlify() {
       </div>
     );
   }
+
+  const slidingSize = activeSession?.difficulty === 'Expert' ? 6 : activeSession?.difficulty === 'Hard' ? 4 : 3;
 
   return (
     <div className="min-h-screen flex flex-col animate-in fade-in duration-500">
@@ -382,9 +409,9 @@ export default function UltimatePuzzlify() {
           </div>
         )}
 
-        <div className="w-full max-w-2xl glass p-8 md:p-12 rounded-[3rem] shadow-2xl relative overflow-auto max-h-[calc(100vh-140px)]">
+        <div className="w-full max-w-4xl glass p-8 md:p-12 rounded-[3rem] shadow-2xl relative overflow-auto max-h-[calc(100vh-140px)]">
           {activeSession && activeSession.type === 'Sudoku' && <SudokuBoard key={activeSession.id} initialData={activeSession.data} userProgress={activeSession.userProgress} onUpdate={handleUpdate} />}
-          {activeSession && activeSession.type === 'Sliding Puzzle' && <SlidingBoard key={activeSession.id} initialData={activeSession.data} onUpdate={handleUpdate} />}
+          {activeSession && activeSession.type === 'Sliding Puzzle' && <SlidingBoard key={activeSession.id} initialData={activeSession.data} size={slidingSize} onUpdate={handleUpdate} />}
           {activeSession && activeSession.type === 'Memory Grid' && <MemoryBoard key={activeSession.id} initialData={activeSession.data} onUpdate={handleUpdate} />}
           {activeSession && activeSession.type === '2048' && <Game2048 key={activeSession.id} onUpdate={handleUpdate} />}
           {activeSession && activeSession.type === 'TicTacToeAI' && <TicTacToeAI key={activeSession.id} onUpdate={handleUpdate} />}
