@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -42,6 +41,22 @@ import { useUser, useFirestore } from '@/firebase';
 
 type View = 'hub' | 'play' | 'profile' | 'leaderboard';
 
+// Fallback puzzles for when AI fails or is too slow
+const FALLBACK_PUZZLES: Record<string, { data: string, solution: string }> = {
+  'Sudoku': {
+    data: "53..7....6..195....98....6.8...6...34..8.3..17...2...6.6....28....419..5....8..79",
+    solution: "534678912672195348198342567859761423426853791713924856961537284287419635345286179"
+  },
+  'Sliding Puzzle': {
+    data: "1,2,3,4,5,6,7,0,8",
+    solution: "1,2,3,4,5,6,7,8,0"
+  },
+  'Memory Grid': {
+    data: "🍎,🍌,🍒,🥑,🍎,🍌,🍒,🥑,⭐,🌙,☀️,☁️,⭐,🌙,☀️,☁️",
+    solution: "MATCHED"
+  }
+};
+
 export default function UltimatePuzzlify() {
   const { user } = useUser();
   const db = useFirestore();
@@ -81,17 +96,23 @@ export default function UltimatePuzzlify() {
       let solution = "";
       
       if (needsAI) {
-        // Wrap AI call in timeout protection
-        const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 15000);
-        
         try {
-          const result = await generateUniquePuzzle({ puzzleType: type, difficulty: pDiff });
-          clearTimeout(timeoutId);
+          // Attempt AI generation with a competitive race against a timeout or fallback
+          const result = await Promise.race([
+            generateUniquePuzzle({ puzzleType: type, difficulty: pDiff }),
+            new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Timeout")), 12000))
+          ]);
           data = result.puzzleData;
           solution = result.solution;
         } catch (aiError) {
-          throw new Error("AI generation timed out or failed. Please try again.");
+          console.warn("AI generation slow or failed, using logic fallback patterns.");
+          const fallback = FALLBACK_PUZZLES[type] || FALLBACK_PUZZLES['Sudoku'];
+          data = fallback.data;
+          solution = fallback.solution;
+          toast({ 
+            title: "Network Latency Detected", 
+            description: "Synchronizing pre-verified logic matrix instead." 
+          });
         }
       }
 
@@ -125,7 +146,7 @@ export default function UltimatePuzzlify() {
       toast({ 
         variant: "destructive", 
         title: "Matrix Connection Failed", 
-        description: err.message || "The logic stream was interrupted. Check your network." 
+        description: err.message || "The logic stream was interrupted." 
       });
     } finally {
       setLoading(false);

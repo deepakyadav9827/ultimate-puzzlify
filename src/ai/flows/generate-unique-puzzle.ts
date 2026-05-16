@@ -32,7 +32,7 @@ const prompt = ai.definePrompt({
   input: {schema: GenerateUniquePuzzleInputSchema},
   output: {schema: GenerateUniquePuzzleOutputSchema},
   config: {
-    temperature: 0.4,
+    temperature: 0.2, // Lower temperature for faster, more deterministic output
   },
   prompt: `Act as a high-speed logic engine. Generate a unique {{{difficulty}}} {{{puzzleType}}} matrix.
 
@@ -47,7 +47,7 @@ STRICT OUTPUT RULES:
     puzzleData: 16 items (8 unique pairs), comma-separated. Emojis or symbols preferred.
     solution: ALWAYS exactly "MATCHED"
 
-Be extremely concise. Ensure the solution is valid and unique.`,
+Ensure the solution is valid. If you cannot generate a unique one instantly, return a classic valid pattern.`,
 });
 
 const generateUniquePuzzleFlow = ai.defineFlow(
