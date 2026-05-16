@@ -1,3 +1,4 @@
+
 'use server';
 /**
  * @fileOverview Optimized Genkit flow to generate unique puzzles rapidly with fallbacks.
@@ -32,22 +33,23 @@ const prompt = ai.definePrompt({
   input: {schema: GenerateUniquePuzzleInputSchema},
   output: {schema: GenerateUniquePuzzleOutputSchema},
   config: {
-    temperature: 0.2,
+    temperature: 0.8, // Increased temperature for variety
   },
-  prompt: `Act as a high-speed logic engine. Generate a unique {{{difficulty}}} {{{puzzleType}}} matrix.
+  prompt: `Act as a high-speed logic engine. Generate a unique and challenging {{{difficulty}}} {{{puzzleType}}} matrix. 
+DIVERSIFY patterns. Do not repeat standard patterns.
 
 STRICT OUTPUT RULES:
 - Sudoku: 
-    puzzleData: 81 chars, '.' for empty. 
+    puzzleData: 81 chars, '.' for empty. EASY = 40+ clues, EXPERT = 20- clues.
     solution: 81 chars, the fully solved grid.
 - Sliding Puzzle: 
     puzzleData: 9 comma-separated numbers (0-8) in a SHUFFLED but SOLVABLE order. 0 is empty.
-    solution: ALWAYS exactly "1,2,3,4,5,6,7,8,0"
+    solution: ALWAYS "1,2,3,4,5,6,7,8,0"
 - Memory Grid: 
-    puzzleData: 16 items (8 unique pairs), comma-separated. Emojis or symbols preferred.
-    solution: ALWAYS exactly "MATCHED"
+    puzzleData: 16 items (8 unique pairs), randomly shuffled, comma-separated. Use diverse Emojis.
+    solution: ALWAYS "MATCHED"
 
-Ensure the solution is valid. If you cannot generate a unique one instantly, return a classic valid pattern.`,
+Ensure the solution is valid and the puzzle is solvable.`,
 });
 
 const generateUniquePuzzleFlow = ai.defineFlow(
@@ -63,10 +65,14 @@ const generateUniquePuzzleFlow = ai.defineFlow(
       return output;
     } catch (error) {
       console.warn('AI Quota exceeded or failure. Returning robust fallback matrix.');
-      // Fail-safe logic: Return high-quality static patterns based on type
       if (input.puzzleType === 'Sliding Puzzle') {
+        const patterns = [
+          "1,2,3,4,5,6,7,0,8",
+          "4,1,2,7,5,3,0,8,6",
+          "1,5,2,4,0,3,7,8,6"
+        ];
         return {
-          puzzleData: "1,2,3,4,5,6,7,0,8",
+          puzzleData: patterns[Math.floor(Math.random() * patterns.length)],
           solution: "1,2,3,4,5,6,7,8,0",
           description: "Stable logic sequence restored."
         };

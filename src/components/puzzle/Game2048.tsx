@@ -28,6 +28,17 @@ export function Game2048({ onUpdate }: Game2048Props) {
     return newBoard;
   }
 
+  const checkGameOver = (board: number[][]) => {
+    for (let r = 0; r < 4; r++) {
+      for (let c = 0; c < 4; c++) {
+        if (board[r][c] === 0) return false;
+        if (c < 3 && board[r][c] === board[r][c+1]) return false;
+        if (r < 3 && board[r][c] === board[r+1][c]) return false;
+      }
+    }
+    return true;
+  };
+
   const move = useCallback((direction: 'up' | 'down' | 'left' | 'right') => {
     let moved = false;
     let newGrid = grid.map(row => [...row]);
@@ -45,7 +56,10 @@ export function Game2048({ onUpdate }: Game2048Props) {
           row[i] *= 2;
           row.splice(i+1, 1);
           moved = true;
-          if (row[i] === 2048) onUpdate("WIN");
+          if (row[i] === 2048) {
+            onUpdate("WIN");
+            return;
+          }
         }
       }
       while (row.length < 4) row.push(0);
@@ -61,6 +75,9 @@ export function Game2048({ onUpdate }: Game2048Props) {
       const final = addRandom(newGrid);
       setGrid(final);
       onUpdate(final.flat().join(','), 1);
+      if (checkGameOver(final)) {
+        onUpdate("LOSE");
+      }
     }
   }, [grid, onUpdate]);
 
@@ -91,10 +108,10 @@ export function Game2048({ onUpdate }: Game2048Props) {
   };
 
   return (
-    <div className="grid grid-cols-4 gap-3 p-4 glass rounded-3xl aspect-square w-full max-w-md mx-auto">
+    <div className="grid grid-cols-4 gap-3 p-4 glass rounded-[2rem] aspect-square w-full max-w-md mx-auto">
       {grid.flat().map((val, i) => (
         <div key={i} className={cn(
-          "flex items-center justify-center text-2xl font-bold rounded-2xl transition-all duration-100",
+          "flex items-center justify-center text-2xl font-headline font-bold rounded-2xl transition-all duration-100",
           colors[val] || 'bg-primary'
         )}>
           {val !== 0 && val}

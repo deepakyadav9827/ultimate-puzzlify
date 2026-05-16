@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -41,18 +42,23 @@ import { useUser, useFirestore } from '@/firebase';
 
 type View = 'hub' | 'play' | 'profile' | 'leaderboard';
 
-const FALLBACK_PUZZLES: Record<string, { data: string, solution: string }> = {
+const FALLBACK_PUZZLES: Record<string, Record<string, { data: string, solution: string }>> = {
   'Sudoku': {
-    data: "53..7....6..195....98....6.8...6...34..8.3..17...2...6.6....28....419..5....8..79",
-    solution: "534678912672195348198342567859761423426853791713924856961537284287419635345286179"
+    'Easy': {
+      data: "53..7....6..195....98....6.8...6...34..8.3..17...2...6.6....28....419..5....8..79",
+      solution: "534678912672195348198342567859761423426853791713924856961537284287419635345286179"
+    },
+    'Medium': {
+      data: "...26.7.168.7..9.519...4.6..4.6.2.81.2.8.5.7.85.1.9.4..1.9...242.9..7.59.8.5.6...",
+      solution: "435269781682713945197854263346172589921845376857139642713985624269437159584526317"
+    }
   },
   'Sliding Puzzle': {
-    data: "1,2,3,4,5,6,7,0,8",
-    solution: "1,2,3,4,5,6,7,8,0"
+    'Easy': { data: "1,2,3,4,5,6,7,0,8", solution: "1,2,3,4,5,6,7,8,0" },
+    'Hard': { data: "4,1,2,7,5,3,0,8,6", solution: "1,2,3,4,5,6,7,8,0" }
   },
   'Memory Grid': {
-    data: "🍎,🍌,🍒,🥑,🍎,🍌,🍒,🥑,⭐,🌙,☀️,☁️,⭐,🌙,☀️,☁️",
-    solution: "MATCHED"
+    'Easy': { data: "🍎,🍌,🍎,🍌,🍒,🥑,🍒,🥑,⭐,🌙,⭐,🌙,☀️,☁️,☀️,☁️", solution: "MATCHED" }
   }
 };
 
@@ -61,7 +67,6 @@ export default function UltimatePuzzlify() {
   const db = useFirestore();
   const [view, setView] = useState<View>('hub');
   const [activeSession, setActiveSession] = useState<GameSession | null>(null);
-  const [sessions, setSessions] = useState<GameSession[]>([]);
   const [userStats, setUserStats] = useState<UserStats>({ totalShards: 0, puzzlesSolved: 0 });
   const [loading, setLoading] = useState(false);
   const [elapsedSeconds, setElapsedSeconds] = useState(0);
@@ -70,17 +75,16 @@ export default function UltimatePuzzlify() {
   const [showGameOver, setShowGameOver] = useState(false);
 
   useEffect(() => {
-    setSessions(getAllSessions());
     setUserStats(getUserStats());
   }, [view]);
 
   useEffect(() => {
     let interval: NodeJS.Timeout;
-    if (view === 'play' && activeSession && !activeSession.isCompleted && !showGameOver) {
+    if (view === 'play' && activeSession && !activeSession.isCompleted && !showGameOver && !showWin) {
       interval = setInterval(() => setElapsedSeconds(s => s + 1), 1000);
     }
     return () => clearInterval(interval);
-  }, [view, activeSession, showGameOver]);
+  }, [view, activeSession, showGameOver, showWin]);
 
   const formatTime = (s: number) => {
     const m = Math.floor(s / 60);
@@ -90,6 +94,8 @@ export default function UltimatePuzzlify() {
 
   const startNewGame = async (type: string) => {
     setLoading(true);
+    setShowWin(false);
+    setShowGameOver(false);
     try {
       const needsAI = ['Sudoku', 'Sliding Puzzle', 'Memory Grid'].includes(type);
       let data = "";
@@ -99,26 +105,24 @@ export default function UltimatePuzzlify() {
         try {
           const result = await Promise.race([
             generateUniquePuzzle({ puzzleType: type, difficulty: pDiff }),
-            new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Timeout")), 12000))
+            new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Timeout")), 10000))
           ]);
           data = result.puzzleData;
           solution = result.solution;
         } catch (aiError) {
-          const fallback = FALLBACK_PUZZLES[type] || FALLBACK_PUZZLES['Sudoku'];
+          const cat = FALLBACK_PUZZLES[type] || FALLBACK_PUZZLES['Sudoku'];
+          const fallback = cat[pDiff] || Object.values(cat)[0];
           data = fallback.data;
           solution = fallback.solution;
         }
       }
-
-      if (type === '2048') solution = "WIN";
-      if (type === 'TicTacToeAI') solution = "WIN";
 
       const newSession: GameSession = {
         id: Math.random().toString(36).substring(7),
         type: type as any,
         difficulty: pDiff,
         data,
-        solution,
+        solution: solution || "WIN",
         userProgress: data,
         moves: 0,
         startTime: Date.now(),
@@ -129,8 +133,6 @@ export default function UltimatePuzzlify() {
       
       setActiveSession(newSession);
       setElapsedSeconds(0);
-      setShowWin(false);
-      setShowGameOver(false);
       setView('play');
 
       if (user && db) {
@@ -194,15 +196,15 @@ export default function UltimatePuzzlify() {
 
   if (view === 'hub') {
     return (
-      <div className="min-h-screen p-4 sm:p-8 md:p-12 max-w-7xl mx-auto space-y-12">
+      <div className="min-h-screen p-4 sm:p-8 md:p-12 max-w-7xl mx-auto space-y-12 animate-in fade-in duration-700">
         <header className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
           <div className="flex items-center gap-5">
             <div className="size-16 rounded-2xl glass violet-glow flex items-center justify-center violet-pulse">
-              <span className="text-3xl font-bold text-violet-400">UP</span>
+              <span className="text-3xl font-headline font-bold text-violet-400">UP</span>
             </div>
             <div>
               <h1 className="text-3xl sm:text-4xl font-headline font-bold text-white tracking-tighter">ULTIMATE PUZZLIFY</h1>
-              <p className="game-status-label">Premium Logic Protocol</p>
+              <p className="game-status-label">Premium Multi Puzzles</p>
             </div>
           </div>
           <div className="flex items-center gap-4 w-full md:w-auto">
@@ -228,11 +230,9 @@ export default function UltimatePuzzlify() {
               </div>
               <h2 className="text-3xl sm:text-5xl font-headline font-bold mb-4">Neural Weaving</h2>
               <p className="text-muted-foreground mb-8 max-w-md">Generate unique logical threads daily. Master the mesh to earn premium shards.</p>
-              <div className="flex flex-wrap items-center gap-4">
-                <Button className="rounded-xl px-10 h-14 bg-violet-600 hover:bg-violet-500 violet-glow text-lg font-bold uppercase tracking-widest" onClick={() => startNewGame('Sudoku')}>
-                  Initialize Today
-                </Button>
-              </div>
+              <Button className="rounded-xl px-10 h-14 bg-violet-600 hover:bg-violet-500 violet-glow text-lg font-headline font-bold uppercase tracking-widest" onClick={() => startNewGame('Sudoku')}>
+                Initialize Today
+              </Button>
             </div>
           </Card>
 
@@ -243,14 +243,14 @@ export default function UltimatePuzzlify() {
                 <h3 className="game-status-label">Difficulty Protocol</h3>
               </div>
               <Select value={pDiff} onValueChange={setPDiff}>
-                <SelectTrigger className="bg-white/5 border-none h-16 rounded-2xl text-xl font-bold">
+                <SelectTrigger className="bg-white/5 border-none h-16 rounded-2xl text-xl font-headline font-bold">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="glass">
-                  <SelectItem value="Easy">Novice</SelectItem>
-                  <SelectItem value="Medium">Adept</SelectItem>
-                  <SelectItem value="Hard">Expert</SelectItem>
-                  <SelectItem value="Expert">Grandmaster</SelectItem>
+                  <SelectItem value="Easy" className="font-headline">Novice</SelectItem>
+                  <SelectItem value="Medium" className="font-headline">Adept</SelectItem>
+                  <SelectItem value="Hard" className="font-headline">Expert</SelectItem>
+                  <SelectItem value="Expert" className="font-headline">Grandmaster</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -282,7 +282,7 @@ export default function UltimatePuzzlify() {
                   <div className={cn("size-14 rounded-2xl glass mb-6 flex items-center justify-center group-hover:scale-110 transition-transform", g.color)}>
                     <g.icon className="size-8" />
                   </div>
-                  <CardTitle className="text-xl mb-1">{g.name}</CardTitle>
+                  <CardTitle className="text-xl font-headline mb-1">{g.name}</CardTitle>
                   <CardDescription className="game-status-label opacity-60">
                     Neural Thread
                   </CardDescription>
@@ -294,7 +294,7 @@ export default function UltimatePuzzlify() {
         ))}
 
         {loading && (
-          <div className="fixed inset-0 z-[100] glass flex items-center justify-center animate-in fade-in duration-500">
+          <div className="fixed inset-0 z-[100] glass flex items-center justify-center animate-in fade-in duration-500 backdrop-blur-3xl">
             <div className="text-center p-8">
               <div className="size-24 glass rounded-3xl mx-auto flex items-center justify-center violet-glow mb-8 animate-pulse">
                 <Cpu className="size-12 text-violet-400" />
@@ -312,14 +312,14 @@ export default function UltimatePuzzlify() {
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen flex flex-col animate-in fade-in duration-500">
       <nav className="glass sticky top-0 z-50 px-6 py-4 flex items-center justify-between backdrop-blur-2xl border-b border-white/5">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => setView('hub')} className="glass hover:bg-destructive/10 text-muted-foreground hover:text-destructive size-10">
             <ArrowLeft className="size-5" />
           </Button>
           <div>
-            <h2 className="text-lg font-bold text-violet-400 uppercase tracking-tighter">{activeSession?.type}</h2>
+            <h2 className="text-lg font-headline font-bold text-violet-400 uppercase tracking-tighter">{activeSession?.type}</h2>
             <div className="flex gap-2 game-status-label">
               <span>{activeSession?.difficulty}</span>
               <span className="text-violet-400">SYNCED</span>
@@ -338,13 +338,13 @@ export default function UltimatePuzzlify() {
             <div className="font-mono text-xl text-primary font-bold">{activeSession?.moves}</div>
             <span className="game-status-label">OPERATIONS</span>
           </div>
-          <Button variant="ghost" size="icon" className="glass size-10 hover:text-violet-400 transition-colors" onClick={() => { startNewGame(activeSession?.type || 'Sudoku') }}>
+          <Button variant="ghost" size="icon" className="glass size-10 hover:text-violet-400 transition-colors" onClick={() => startNewGame(activeSession?.type || 'Sudoku')}>
             <RotateCcw className="size-4" />
           </Button>
         </div>
       </nav>
 
-      <main className="flex-1 flex flex-col items-center justify-center p-6 relative overflow-hidden">
+      <main className="flex-1 flex flex-col items-center justify-center p-6 relative">
         {showWin && (
           <div className="fixed inset-0 z-[60] glass flex flex-col items-center justify-center animate-in zoom-in duration-500 p-6 backdrop-blur-3xl">
             <div className="glass p-12 rounded-[3rem] text-center violet-glow border-violet-400/30 max-w-xl w-full">
@@ -357,8 +357,8 @@ export default function UltimatePuzzlify() {
                 +{calculateReward(activeSession?.difficulty || 'Easy', elapsedSeconds)} SHARDS
               </div>
               <div className="flex flex-col sm:flex-row gap-4">
-                <Button className="flex-1 h-16 rounded-2xl glass hover:bg-white/10 text-lg uppercase font-bold tracking-widest" onClick={() => setView('hub')}>BACK TO HUB</Button>
-                <Button className="flex-1 h-16 rounded-2xl bg-violet-600 hover:bg-violet-500 violet-glow text-lg uppercase font-bold tracking-widest" onClick={() => startNewGame(activeSession?.type || 'Sudoku')}>NEXT MATRIX</Button>
+                <Button className="flex-1 h-16 rounded-2xl glass hover:bg-white/10 text-lg font-headline font-bold uppercase tracking-widest" onClick={() => setView('hub')}>BACK TO HUB</Button>
+                <Button className="flex-1 h-16 rounded-2xl bg-violet-600 hover:bg-violet-500 violet-glow text-lg font-headline font-bold uppercase tracking-widest" onClick={() => startNewGame(activeSession?.type || 'Sudoku')}>NEXT MATRIX</Button>
               </div>
             </div>
           </div>
@@ -373,8 +373,8 @@ export default function UltimatePuzzlify() {
               <h2 className="game-over-title mb-2">PROTOCOL FAILED</h2>
               <p className="game-status-label text-destructive mb-12">Neural Thread Disconnected</p>
               <div className="flex flex-col sm:flex-row gap-4">
-                <Button className="flex-1 h-16 rounded-2xl glass hover:bg-white/10 text-lg uppercase font-bold tracking-widest" onClick={() => setView('hub')}>BACK TO HUB</Button>
-                <Button className="flex-1 h-16 rounded-2xl bg-destructive hover:bg-destructive/80 text-lg uppercase font-bold tracking-widest flex items-center justify-center gap-2" onClick={() => startNewGame(activeSession?.type || 'Sudoku')}>
+                <Button className="flex-1 h-16 rounded-2xl glass hover:bg-white/10 text-lg font-headline font-bold uppercase tracking-widest" onClick={() => setView('hub')}>BACK TO HUB</Button>
+                <Button className="flex-1 h-16 rounded-2xl bg-destructive hover:bg-destructive/80 text-lg font-headline font-bold uppercase tracking-widest flex items-center justify-center gap-2" onClick={() => startNewGame(activeSession?.type || 'Sudoku')}>
                   <RefreshCw className="size-5" /> RETRY PROTOCOL
                 </Button>
               </div>
@@ -391,7 +391,7 @@ export default function UltimatePuzzlify() {
         </div>
       </main>
 
-      {activeSession && !activeSession.isCompleted && !showGameOver && (
+      {activeSession && !activeSession.isCompleted && !showGameOver && !showWin && (
         <HintMentor puzzleType={activeSession.type} difficulty={activeSession.difficulty} gameState={activeSession.userProgress} />
       )}
     </div>

@@ -70,14 +70,18 @@ export function TicTacToeAI({ onUpdate }: TicTacToeAIProps) {
       newBoard[move] = 'O';
       setBoard(newBoard);
       const winner = calculateWinner(newBoard);
-      if (winner === 'X') onUpdate("WIN");
+      if (winner === 'O') {
+        onUpdate("LOSE");
+      } else if (winner === 'Draw') {
+        onUpdate("LOSE"); // Draw is a failure against professional logic
+      }
       onUpdate(newBoard.join(','), 1);
       setIsXNext(true);
     }
   };
 
   const handleClick = (i: number) => {
-    if (board[i] || calculateWinner(board)) return;
+    if (board[i] || calculateWinner(board) || !isXNext) return;
     const newBoard = [...board];
     newBoard[i] = 'X';
     setBoard(newBoard);
@@ -86,15 +90,17 @@ export function TicTacToeAI({ onUpdate }: TicTacToeAIProps) {
     const winner = calculateWinner(newBoard);
     if (winner === 'X') {
       onUpdate("WIN");
-    } else if (winner === null) {
+    } else if (winner === 'Draw') {
+      onUpdate("LOSE");
+    } else {
       setTimeout(() => makeAIMove(newBoard), 500);
     }
   };
 
   return (
-    <div className="grid grid-cols-3 gap-4 aspect-square w-full max-w-sm mx-auto p-4 glass rounded-3xl">
+    <div className="grid grid-cols-3 gap-4 aspect-square w-full max-w-sm mx-auto p-4 glass rounded-[2rem]">
       {board.map((val, i) => (
-        <div key={i} onClick={() => handleClick(i)} className="glass rounded-2xl flex items-center justify-center cursor-pointer hover:bg-white/10 transition-colors">
+        <div key={i} onClick={() => handleClick(i)} className="glass rounded-2xl flex items-center justify-center cursor-pointer hover:bg-white/10 transition-colors border-white/5 h-full w-full aspect-square">
           {val === 'X' && <X className="size-12 text-violet-400" />}
           {val === 'O' && <Circle className="size-12 text-pink-400" />}
         </div>
