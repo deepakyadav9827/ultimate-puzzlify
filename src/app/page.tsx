@@ -1,4 +1,3 @@
-
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -42,24 +41,20 @@ import { useUser, useFirestore } from '@/firebase';
 
 type View = 'hub' | 'play' | 'profile' | 'leaderboard';
 
-const FALLBACK_PUZZLES: Record<string, Record<string, { data: string, solution: string }>> = {
-  'Sudoku': {
-    'Easy': {
-      data: "53..7....6..195....98....6.8...6...34..8.3..17...2...6.6....28....419..5....8..79",
-      solution: "534678912672195348198342567859761423426853791713924856961537284287419635345286179"
-    },
-    'Medium': {
-      data: "...26.7.168.7..9.519...4.6..4.6.2.81.2.8.5.7.85.1.9.4..1.9...242.9..7.59.8.5.6...",
-      solution: "435269781682713945197854263346172589921845376857139642713985624269437159584526317"
-    }
-  },
-  'Sliding Puzzle': {
-    'Easy': { data: "1,2,3,4,5,6,7,0,8", solution: "1,2,3,4,5,6,7,8,0" },
-    'Hard': { data: "4,1,2,7,5,3,0,8,6", solution: "1,2,3,4,5,6,7,8,0" }
-  },
-  'Memory Grid': {
-    'Easy': { data: "🍎,🍌,🍎,🍌,🍒,🥑,🍒,🥑,⭐,🌙,⭐,🌙,☀️,☁️,☀️,☁️", solution: "MATCHED" }
-  }
+const FALLBACK_PUZZLES: Record<string, any> = {
+  'Sudoku': [
+    { data: "53..7....6..195....98....6.8...6...34..8.3..17...2...6.6....28....419..5....8..79", solution: "534678912672195348198342567859761423426853791713924856961537284287419635345286179" },
+    { data: ".94...13..............76..2.8..1.....32.........2...6.....8.4......6...3.7.4.9...", solution: "294358137618243597357917642485716239932584716761329485123895674849762351576431928" }
+  ],
+  'Sliding Puzzle': [
+    { data: "1,2,3,4,5,6,7,0,8", solution: "1,2,3,4,5,6,7,8,0" },
+    { data: "4,1,2,7,5,3,0,8,6", solution: "1,2,3,4,5,6,7,8,0" },
+    { data: "8,6,7,2,5,4,3,0,1", solution: "1,2,3,4,5,6,7,8,0" }
+  ],
+  'Memory Grid': [
+    { data: "🍎,🍌,🍎,🍌,🍒,🥑,🍒,🥑,⭐,🌙,⭐,🌙,☀️,☁️,☀️,☁️", solution: "MATCHED" },
+    { data: "🐱,🐶,🐱,🐶,🦊,🐰,🦊,🐰,🦁,🐯,🦁,🐯,🐼,🐨,🐼,🐨", solution: "MATCHED" }
+  ]
 };
 
 export default function UltimatePuzzlify() {
@@ -96,6 +91,10 @@ export default function UltimatePuzzlify() {
     setLoading(true);
     setShowWin(false);
     setShowGameOver(false);
+    
+    // Reset session briefly to force component remount and clear state
+    setActiveSession(null);
+
     try {
       const needsAI = ['Sudoku', 'Sliding Puzzle', 'Memory Grid'].includes(type);
       let data = "";
@@ -110,8 +109,9 @@ export default function UltimatePuzzlify() {
           data = result.puzzleData;
           solution = result.solution;
         } catch (aiError) {
-          const cat = FALLBACK_PUZZLES[type] || FALLBACK_PUZZLES['Sudoku'];
-          const fallback = cat[pDiff] || Object.values(cat)[0];
+          console.warn("Using local fallback bank for variety");
+          const bank = FALLBACK_PUZZLES[type] || FALLBACK_PUZZLES['Sudoku'];
+          const fallback = bank[Math.floor(Math.random() * bank.length)];
           data = fallback.data;
           solution = fallback.solution;
         }
@@ -282,7 +282,7 @@ export default function UltimatePuzzlify() {
                   <div className={cn("size-14 rounded-2xl glass mb-6 flex items-center justify-center group-hover:scale-110 transition-transform", g.color)}>
                     <g.icon className="size-8" />
                   </div>
-                  <CardTitle className="text-xl font-headline mb-1">{g.name}</CardTitle>
+                  <CardTitle className="text-xl font-headline mb-1 uppercase tracking-wider">{g.name}</CardTitle>
                   <CardDescription className="game-status-label opacity-60">
                     Neural Thread
                   </CardDescription>
@@ -383,11 +383,11 @@ export default function UltimatePuzzlify() {
         )}
 
         <div className="w-full max-w-2xl glass p-8 md:p-12 rounded-[3rem] shadow-2xl relative overflow-auto max-h-[calc(100vh-140px)]">
-          {activeSession?.type === 'Sudoku' && <SudokuBoard initialData={activeSession.data} userProgress={activeSession.userProgress} onUpdate={handleUpdate} />}
-          {activeSession?.type === 'Sliding Puzzle' && <SlidingBoard initialData={activeSession.data} onUpdate={handleUpdate} />}
-          {activeSession?.type === 'Memory Grid' && <MemoryBoard initialData={activeSession.data} onUpdate={handleUpdate} />}
-          {activeSession?.type === '2048' && <Game2048 onUpdate={handleUpdate} />}
-          {activeSession?.type === 'TicTacToeAI' && <TicTacToeAI onUpdate={handleUpdate} />}
+          {activeSession && activeSession.type === 'Sudoku' && <SudokuBoard key={activeSession.id} initialData={activeSession.data} userProgress={activeSession.userProgress} onUpdate={handleUpdate} />}
+          {activeSession && activeSession.type === 'Sliding Puzzle' && <SlidingBoard key={activeSession.id} initialData={activeSession.data} onUpdate={handleUpdate} />}
+          {activeSession && activeSession.type === 'Memory Grid' && <MemoryBoard key={activeSession.id} initialData={activeSession.data} onUpdate={handleUpdate} />}
+          {activeSession && activeSession.type === '2048' && <Game2048 key={activeSession.id} onUpdate={handleUpdate} />}
+          {activeSession && activeSession.type === 'TicTacToeAI' && <TicTacToeAI key={activeSession.id} onUpdate={handleUpdate} />}
         </div>
       </main>
 
