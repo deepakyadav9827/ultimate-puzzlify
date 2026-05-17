@@ -28,14 +28,13 @@ import {
   Hash,
   XCircle,
   Gamepad2,
-  Lock,
   ArrowLeft,
   Search,
   TrendingUp,
   Skull,
   RefreshCw
 } from 'lucide-react';
-import { GameSession, saveSession, getAllSessions, getUserStats, updateCloudStats, UserStats, calculateReward } from '@/lib/game-utils';
+import { GameSession, saveSession, getUserStats, updateCloudStats, UserStats, calculateReward } from '@/lib/game-utils';
 import { cn } from '@/lib/utils';
 import { toast } from '@/hooks/use-toast';
 import { useUser, useFirestore } from '@/firebase';
@@ -233,7 +232,7 @@ export default function UltimatePuzzlify() {
             </div>
             <div>
               <h1 className="text-3xl sm:text-5xl font-headline font-bold text-white tracking-tighter">ULTIMATE PUZZLIFY</h1>
-              <p className="game-status-label mt-1">Premium Multi Puzzles</p>
+              <p className="game-status-label mt-1">Multi Puzzles Premium</p>
             </div>
           </div>
           <div className="flex items-center gap-4 w-full md:w-auto">
@@ -351,11 +350,11 @@ export default function UltimatePuzzlify() {
           <Button variant="ghost" size="icon" onClick={() => setView('hub')} className="glass hover:bg-destructive/10 text-muted-foreground hover:text-destructive size-10 sm:size-12 rounded-xl">
             <ArrowLeft className="size-5 sm:size-6" />
           </Button>
-          <div>
+          <div className="hidden sm:block">
             <h2 className="text-lg sm:text-2xl font-headline font-bold text-violet-400 uppercase tracking-tighter truncate max-w-[120px] sm:max-w-none">{activeSession?.type}</h2>
             <div className="flex gap-2 game-status-label text-[10px] sm:text-xs">
               <span>{activeSession?.difficulty}</span>
-              <span className="text-violet-400 hidden sm:inline">SYNCED</span>
+              <span className="text-violet-400">SYNCED</span>
             </div>
           </div>
         </div>
