@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -14,7 +15,6 @@ export function SlidingBoard({ initialData, size = 3, onUpdate }: SlidingBoardPr
 
   useEffect(() => {
     if (initialData) {
-      // Ensure we parse the data correctly regardless of commas or spacing
       const parsed = initialData.split(',').map(n => parseInt(n.trim(), 10));
       setTiles(parsed);
     }
@@ -39,14 +39,13 @@ export function SlidingBoard({ initialData, size = 3, onUpdate }: SlidingBoardPr
     }
   };
 
-  // Dynamic grid styles based on size
   const gridStyle = {
     gridTemplateColumns: `repeat(${size}, minmax(0, 1fr))`,
   };
 
   return (
     <div 
-      className="grid gap-2 p-2 sm:p-4 bg-muted/30 rounded-2xl glass violet-glow aspect-square w-full max-w-2xl mx-auto"
+      className="grid gap-1 sm:gap-2 p-1 sm:p-4 bg-muted/30 rounded-xl sm:rounded-2xl glass violet-glow aspect-square w-full max-w-2xl mx-auto"
       style={gridStyle}
     >
       {tiles.map((tile, i) => (
@@ -56,9 +55,9 @@ export function SlidingBoard({ initialData, size = 3, onUpdate }: SlidingBoardPr
           className={cn(
             "flex items-center justify-center font-headline font-bold rounded-lg transition-all duration-300 transform",
             tile === 0 ? "bg-transparent cursor-default" : "bg-card border border-primary/20 text-primary shadow-lg hover:scale-105 hover:bg-primary/20 hover:text-white cursor-pointer select-none active:scale-95",
-            size === 3 ? "text-3xl sm:text-4xl h-24 sm:h-32" : 
-            size === 4 ? "text-2xl sm:text-3xl h-16 sm:h-24" :
-            "text-lg sm:text-xl h-10 sm:h-14"
+            size === 3 ? "text-2xl sm:text-4xl h-full" : 
+            size === 4 ? "text-xl sm:text-3xl h-full" :
+            "text-sm sm:text-xl h-full"
           )}
         >
           {tile !== 0 && tile}

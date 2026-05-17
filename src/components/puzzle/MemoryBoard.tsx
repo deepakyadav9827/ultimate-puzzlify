@@ -1,3 +1,4 @@
+
 'use client';
 
 import React, { useState, useEffect } from 'react';
@@ -86,7 +87,7 @@ export function MemoryBoard({ initialData, size = 4, onUpdate }: MemoryBoardProp
               
               <div className={cn(
                 "absolute inset-0 bg-primary/10 border-2 border-primary rounded-lg sm:rounded-xl flex items-center justify-center backface-hidden rotate-y-180",
-                size === 6 ? "text-lg sm:text-3xl" : "text-3xl sm:text-5xl",
+                size === 6 ? "text-lg sm:text-2xl" : "text-3xl sm:text-5xl",
                 isMatched && "border-accent bg-accent/10 text-accent neon-glow"
               )}>
                 {item}

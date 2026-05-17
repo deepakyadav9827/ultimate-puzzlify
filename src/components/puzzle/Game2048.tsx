@@ -9,10 +9,9 @@ interface Game2048Props {
 }
 
 export function Game2048({ onUpdate }: Game2048Props) {
-  const [grid, setGrid] = useState<number[][]>(() => {
-    const empty = Array(4).fill(null).map(() => Array(4).fill(0));
-    return addRandom(addRandom(empty));
-  });
+  const [grid, setGrid] = useState<number[][]>(Array(4).fill(null).map(() => Array(4).fill(0)));
+  const [touchStart, setTouchStart] = useState<{ x: number, y: number } | null>(null);
+  const [initialized, setInitialized] = useState(false);
 
   function addRandom(board: number[][]) {
     const empty = [];
@@ -27,6 +26,15 @@ export function Game2048({ onUpdate }: Game2048Props) {
     newBoard[r][c] = Math.random() < 0.9 ? 2 : 4;
     return newBoard;
   }
+
+  // Prevent hydration mismatch by initializing after mount
+  useEffect(() => {
+    if (!initialized) {
+      const empty = Array(4).fill(null).map(() => Array(4).fill(0));
+      setGrid(addRandom(addRandom(empty)));
+      setInitialized(true);
+    }
+  }, [initialized]);
 
   const checkGameOver = (board: number[][]) => {
     for (let r = 0; r < 4; r++) {
@@ -92,6 +100,30 @@ export function Game2048({ onUpdate }: Game2048Props) {
     return () => window.removeEventListener('keydown', handleKey);
   }, [move]);
 
+  const handleTouchStart = (e: React.TouchEvent) => {
+    setTouchStart({
+      x: e.touches[0].clientX,
+      y: e.touches[0].clientY
+    });
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    if (!touchStart) return;
+    const xDiff = touchStart.x - e.changedTouches[0].clientX;
+    const yDiff = touchStart.y - e.changedTouches[0].clientY;
+
+    if (Math.abs(xDiff) > Math.abs(yDiff)) {
+      if (Math.abs(xDiff) > 30) {
+        move(xDiff > 0 ? 'left' : 'right');
+      }
+    } else {
+      if (Math.abs(yDiff) > 30) {
+        move(yDiff > 0 ? 'up' : 'down');
+      }
+    }
+    setTouchStart(null);
+  };
+
   const colors: Record<number, string> = {
     0: 'bg-white/5',
     2: 'bg-violet-900/40 text-violet-100',
@@ -108,10 +140,14 @@ export function Game2048({ onUpdate }: Game2048Props) {
   };
 
   return (
-    <div className="grid grid-cols-4 gap-3 p-4 glass rounded-[2rem] aspect-square w-full max-w-md mx-auto">
+    <div 
+      className="grid grid-cols-4 gap-2 sm:gap-3 p-3 sm:p-4 glass rounded-[1.5rem] sm:rounded-[2rem] aspect-square w-full max-w-md mx-auto touch-none"
+      onTouchStart={handleTouchStart}
+      onTouchEnd={handleTouchEnd}
+    >
       {grid.flat().map((val, i) => (
         <div key={i} className={cn(
-          "flex items-center justify-center text-2xl font-headline font-bold rounded-2xl transition-all duration-100",
+          "flex items-center justify-center text-xl sm:text-2xl font-headline font-bold rounded-xl sm:rounded-2xl transition-all duration-100",
           colors[val] || 'bg-primary'
         )}>
           {val !== 0 && val}
