@@ -257,7 +257,7 @@ export default function UltimatePuzzlify() {
            <div className="size-14 sm:size-16 rounded-3xl glass violet-glow flex items-center justify-center violet-pulse overflow-hidden">
              <div className="flex items-center justify-center">
                <img
-                 src="/glogo.png"
+                 src="/newlogo.png"
                  alt="Ultimate Puzzlify Logo"
                  className="w-[120px] h-auto object-contain"
                />
