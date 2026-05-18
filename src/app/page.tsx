@@ -255,13 +255,16 @@ export default function UltimatePuzzlify() {
         <header className="flex flex-col md:flex-row items-center md:items-center justify-between gap-6 text-center md:text-left">
           <div className="flex flex-col md:flex-row items-center gap-5">
            <div className="size-14 sm:size-16 rounded-3xl glass violet-glow flex items-center justify-center violet-pulse overflow-hidden">
-              <Image
-                src="/glogo.png"
-                alt="Ultimate Puzzlify Logo"
-                width={70}
-                height={70}
-                className="object-contain rounded-2xl"
-              />
+              <div className="w-[70px] h-[70px] flex items-center justify-center">
+               <Image
+                 src="/glogo.png"
+                 alt="Ultimate Puzzlify Logo"
+                 width={70}
+                 height={70}
+                 priority
+                 className="object-contain"
+               />
+             </div>
            </div>
             <div>
               <h1 className="text-2xl sm:text-4xl md:text-5xl font-headline font-semibold text-white tracking-tight leading-none">ULTIMATE PUZZLIFY</h1>
