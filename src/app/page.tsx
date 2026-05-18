@@ -1,7 +1,8 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import { generateUniquePuzzle } from '@/ai/flows/generate-unique-puzzle';
 import { SudokuBoard } from '@/components/puzzle/SudokuBoard';
 import { SlidingBoard } from '@/components/puzzle/SlidingBoard';
@@ -71,6 +72,32 @@ export default function UltimatePuzzlify() {
   const [pDiff, setPDiff] = useState<string>('Medium');
   const [showWin, setShowWin] = useState(false);
   const [showGameOver, setShowGameOver] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [musicStarted, setMusicStarted] = useState(false);
+
+  useEffect(() => {
+  audioRef.current = new Audio('/music/theme.mp3');
+
+  audioRef.current.loop = true;
+
+  audioRef.current.volume = 0.35;
+
+  const startAudio = () => {
+    if (!musicStarted) {
+      audioRef.current?.play();
+
+      setMusicStarted(true);
+    }
+  };
+
+  window.addEventListener('click', startAudio);
+
+  return () => {
+    audioRef.current?.pause();
+
+    window.removeEventListener('click', startAudio);
+  };
+}, [musicStarted]);
 
   useEffect(() => {
     setUserStats(getUserStats());
@@ -227,12 +254,19 @@ export default function UltimatePuzzlify() {
       <div className="min-h-screen p-4 sm:p-8 md:p-12 max-w-7xl mx-auto space-y-8 sm:space-y-12 animate-in fade-in duration-700">
         <header className="flex flex-col md:flex-row items-center md:items-center justify-between gap-6 text-center md:text-left">
           <div className="flex flex-col md:flex-row items-center gap-5">
-            <div className="size-16 sm:size-20 rounded-2xl glass violet-glow flex items-center justify-center violet-pulse">
-              <span className="text-3xl sm:text-4xl font-headline font-bold text-violet-400">UP</span>
-            </div>
+           <div className="size-14 sm:size-16 rounded-3xl glass violet-glow flex items-center justify-center violet-pulse overflow-hidden">
+              <Image
+                src="/glogo.png"
+                alt="Ultimate Puzzlify Logo"
+                width={90}
+                height={90}
+                priority
+                className="object-contain scale-125 drop-shadow-[0_0_18px_rgba(168,85,247,0.7)]"
+              />
+           </div>
             <div>
-              <h1 className="text-3xl sm:text-5xl font-headline font-bold text-white tracking-tighter">ULTIMATE PUZZLIFY</h1>
-              <p className="game-status-label mt-1">Multi Puzzles Premium</p>
+              <h1 className="text-2xl sm:text-4xl md:text-5xl font-headline font-semibold text-white tracking-tight leading-none">ULTIMATE PUZZLIFY</h1>
+              <p className="game-status-label mt-2 tracking-[0.35em] text-[11px] text-violet-300/70">Multi Puzzles Premium</p>
             </div>
           </div>
           <div className="flex items-center gap-4 w-full md:w-auto">
@@ -256,11 +290,17 @@ export default function UltimatePuzzlify() {
                 <TrendingUp className="size-5" />
                 <span className="game-status-label">Protocol Active</span>
               </div>
-              <h2 className="text-4xl sm:text-6xl font-headline font-bold mb-4 tracking-tight">Neural Weaving</h2>
-              <p className="text-muted-foreground mb-8 max-w-md text-lg">Generate unique logical threads daily. Master the mesh to earn premium shards.</p>
-              <Button className="rounded-xl px-12 h-16 bg-violet-600 hover:bg-violet-500 violet-glow text-xl font-headline font-bold uppercase tracking-widest transition-all active:scale-95" onClick={() => startNewGame('Sudoku')}>
-                Initialize Today
-              </Button>
+             <h2 className="text-4xl sm:text-5xl font-headline font-semibold mb-6 tracking-tight leading-tight">Neural Weaving</h2>
+              <p className="text-muted-foreground/90 mb-10 max-w-xl text-lg leading-relaxed">Generate unique logical threads daily. Master the mesh to earn premium shards.</p>
+             <Button
+                 className="rounded-xl px-12 h-16 bg-violet-600 hover:bg-violet-500 violet-glow text-xl font-headline font-bold uppercase tracking-widest transition-all active:scale-95"
+                 onClick={() => {
+                   audioRef.current?.play();
+                   startNewGame('Sudoku');
+                }}
+              >
+               Initialize Today
+             </Button>
             </div>
           </Card>
 
@@ -302,11 +342,14 @@ export default function UltimatePuzzlify() {
             </h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {cat.games.map((g) => (
-                <Card 
-                  key={g.id} 
-                  onClick={() => startNewGame(g.id)}
-                  className="glass-card border-none rounded-[2rem] p-8 group cursor-pointer relative transition-all active:scale-95"
-                >
+              <Card 
+                 key={g.id} 
+                 onClick={() => {
+                   audioRef.current?.play();
+                   startNewGame(g.id);
+                }}
+             className="glass-card border-none rounded-[2rem] p-8 group cursor-pointer relative transition-all active:scale-95"
+            >
                   <div className={cn("size-16 rounded-2xl glass mb-6 flex items-center justify-center group-hover:scale-110 transition-transform", g.color)}>
                     <g.icon className="size-10" />
                   </div>

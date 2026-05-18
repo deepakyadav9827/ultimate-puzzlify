@@ -4,26 +4,35 @@
 
 @layer base {
   :root {
-    --background: 260 30% 4%;
+    --background: 240 18% 4%;
     --foreground: 0 0% 98%;
-    --card: 260 25% 8%;
+
+    --card: 240 14% 8%;
     --card-foreground: 0 0% 98%;
-    --popover: 260 30% 4%;
+
+    --popover: 240 18% 4%;
     --popover-foreground: 0 0% 98%;
-    --primary: 262 83% 58%;
+
+    --primary: 262 83% 62%;
     --primary-foreground: 0 0% 100%;
-    --secondary: 260 20% 12%;
+
+    --secondary: 240 10% 12%;
     --secondary-foreground: 0 0% 98%;
-    --muted: 260 20% 10%;
-    --muted-foreground: 260 10% 70%;
-    --accent: 280 90% 65%;
+
+    --muted: 240 8% 14%;
+    --muted-foreground: 240 5% 70%;
+
+    --accent: 280 90% 68%;
     --accent-foreground: 0 0% 100%;
-    --destructive: 0 84.2% 60.2%;
+
+    --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 98%;
-    --border: 260 20% 15%;
-    --input: 260 20% 15%;
-    --ring: 262 83% 58%;
-    --radius: 1rem;
+
+    --border: 240 10% 16%;
+    --input: 240 10% 16%;
+    --ring: 262 83% 62%;
+
+    --radius: 1.3rem;
   }
 }
 
@@ -31,74 +40,196 @@
   * {
     @apply border-border;
   }
-  body {
-    @apply bg-background text-foreground font-body antialiased selection:bg-primary/30;
-    background-image: 
-      radial-gradient(at 0% 0%, hsla(262, 83%, 58%, 0.1) 0, transparent 50%),
-      radial-gradient(at 100% 100%, hsla(280, 90%, 65%, 0.1) 0, transparent 50%);
+
+  html {
+    scroll-behavior: smooth;
   }
-  h1, h2, h3, h4, h5, h6 {
-    @apply font-headline uppercase tracking-tighter;
+
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Outfit', sans-serif;
+
+    background-image:
+      radial-gradient(circle at top left, rgba(139, 92, 246, 0.18), transparent 30%),
+      radial-gradient(circle at bottom right, rgba(168, 85, 247, 0.12), transparent 30%);
+
+    overflow-x: hidden;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: 'Space Grotesk', sans-serif;
+    @apply tracking-tight;
   }
 }
 
+/* PREMIUM GLASS */
+
 .glass {
-  @apply bg-white/5 border border-white/10 backdrop-blur-xl;
-  box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+  background: rgba(255, 255, 255, 0.05);
+
+  backdrop-filter: blur(18px);
+
+  border: 1px solid rgba(255, 255, 255, 0.08);
+
+  box-shadow:
+    0 8px 32px rgba(0, 0, 0, 0.35),
+    inset 0 1px 1px rgba(255,255,255,0.06);
 }
 
 .glass-card {
-  @apply glass hover:bg-white/10 transition-all duration-500;
+  @apply glass transition-all duration-500;
 }
 
+.glass-card:hover {
+  background: rgba(255,255,255,0.08);
+
+  transform: translateY(-4px);
+
+  box-shadow:
+    0 15px 40px rgba(139,92,246,0.18);
+}
+
+/* GLOW EFFECTS */
+
 .violet-glow {
-  box-shadow: 0 0 40px -10px hsl(var(--primary) / 0.5);
+  box-shadow:
+    0 0 25px rgba(139,92,246,0.35),
+    0 0 60px rgba(139,92,246,0.15);
 }
 
 .violet-pulse {
-  animation: violet-pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  animation: violet-pulse 3s ease-in-out infinite;
 }
 
 @keyframes violet-pulse {
-  0%, 100% { box-shadow: 0 0 20px -5px hsl(var(--primary) / 0.3); }
-  50% { box-shadow: 0 0 40px 5px hsl(var(--primary) / 0.6); }
+  0%, 100% {
+    box-shadow:
+      0 0 20px rgba(139,92,246,0.2);
+  }
+
+  50% {
+    box-shadow:
+      0 0 45px rgba(139,92,246,0.5);
+  }
 }
 
+/* PREMIUM TEXT */
+
 .text-gradient {
-  @apply bg-clip-text text-transparent bg-gradient-to-br from-white via-white to-primary;
+  background: linear-gradient(
+    to bottom right,
+    #ffffff,
+    #c4b5fd,
+    #8b5cf6
+  );
+
+  -webkit-background-clip: text;
+
+  -webkit-text-fill-color: transparent;
 }
 
 .text-gradient-destructive {
-  @apply bg-clip-text text-transparent bg-gradient-to-br from-white via-red-200 to-destructive;
+  background: linear-gradient(
+    to bottom right,
+    #ffffff,
+    #fca5a5,
+    #ef4444
+  );
+
+  -webkit-background-clip: text;
+
+  -webkit-text-fill-color: transparent;
 }
+
+/* FLOATING EFFECT */
 
 .animate-float {
   animation: float 6s ease-in-out infinite;
 }
 
 @keyframes float {
-  0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-10px); }
+  0%, 100% {
+    transform: translateY(0px);
+  }
+
+  50% {
+    transform: translateY(-12px);
+  }
 }
+
+/* GAME GRID */
 
 .grid-board {
   display: grid;
+
   gap: 6px;
-  background-color: hsla(var(--border), 0.5);
-  padding: 8px;
-  border-radius: var(--radius);
+
+  background: rgba(255,255,255,0.04);
+
+  padding: 10px;
+
+  border-radius: 1.5rem;
+
   user-select: none;
+
+  backdrop-filter: blur(12px);
+
+  border: 1px solid rgba(255,255,255,0.08);
 }
 
+/* TITLES */
+
 .game-title {
-  @apply text-5xl md:text-7xl font-headline font-bold text-gradient uppercase tracking-tighter;
-  filter: drop-shadow(0 0 10px hsla(var(--primary), 0.3));
+  @apply text-5xl md:text-7xl font-black text-gradient;
+
+  letter-spacing: -0.05em;
+
+  filter:
+    drop-shadow(0 0 15px rgba(139,92,246,0.25));
 }
 
 .game-status-label {
-  @apply text-[10px] md:text-xs font-headline font-bold uppercase tracking-[0.2em] text-muted-foreground;
+  @apply text-[10px] md:text-xs uppercase tracking-[0.25em];
+
+  color: rgba(255,255,255,0.5);
+
+  font-weight: 700;
 }
 
 .game-over-title {
-  @apply text-5xl md:text-7xl font-headline font-bold text-gradient-destructive uppercase tracking-tighter;
+  @apply text-5xl md:text-7xl font-black text-gradient-destructive;
+
+  letter-spacing: -0.05em;
+}
+
+/* PREMIUM SCROLLBAR */
+
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(255,255,255,0.03);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(139,92,246,0.4);
+
+  border-radius: 999px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(139,92,246,0.7);
+}
+
+/* SELECTION */
+
+::selection {
+  background: rgba(139,92,246,0.35);
+  color: white;
 }

@@ -10,94 +10,234 @@ interface SudokuBoardProps {
   onUpdate: (progress: string, moves?: number) => void;
 }
 
-export function SudokuBoard({ initialData, userProgress, onUpdate }: SudokuBoardProps) {
+export function SudokuBoard({
+  initialData,
+  userProgress,
+  onUpdate,
+}: SudokuBoardProps) {
+
   const [grid, setGrid] = useState<string[]>([]);
+
   const [selectedCell, setSelectedCell] = useState<number | null>(null);
 
   useEffect(() => {
+
     const displayGrid = initialData.split('').map((char, i) => {
+
       if (char !== '.') return char;
+
       return userProgress[i] === '.' ? '.' : userProgress[i];
+
     });
+
     setGrid(displayGrid);
+
   }, [initialData, userProgress]);
 
   const handleCellClick = (index: number) => {
+
     if (initialData[index] === '.') {
+
       setSelectedCell(index);
+
     } else {
+
       setSelectedCell(null);
     }
   };
 
   const handleInput = useCallback((val: string) => {
+
     if (selectedCell === null) return;
+
     if (grid[selectedCell] === val) return;
 
     const newGrid = [...grid];
+
     newGrid[selectedCell] = val;
+
     setGrid(newGrid);
+
+    // ✅ REAL SUDOKU VALIDATION
+    const isComplete = !newGrid.includes('.');
+
+    if (isComplete) {
+
+      const isValidSudoku = (board: string[]) => {
+
+        // ✅ Rows check
+        for (let row = 0; row < 9; row++) {
+
+          const seen = new Set();
+
+          for (let col = 0; col < 9; col++) {
+
+            const value = board[row * 9 + col];
+
+            if (seen.has(value)) return false;
+
+            seen.add(value);
+          }
+        }
+
+        // ✅ Columns check
+        for (let col = 0; col < 9; col++) {
+
+          const seen = new Set();
+
+          for (let row = 0; row < 9; row++) {
+
+            const value = board[row * 9 + col];
+
+            if (seen.has(value)) return false;
+
+            seen.add(value);
+          }
+        }
+
+        // ✅ 3x3 Box check
+        for (let boxRow = 0; boxRow < 3; boxRow++) {
+
+          for (let boxCol = 0; boxCol < 3; boxCol++) {
+
+            const seen = new Set();
+
+            for (let row = 0; row < 3; row++) {
+
+              for (let col = 0; col < 3; col++) {
+
+                const index =
+                  (boxRow * 3 + row) * 9 +
+                  (boxCol * 3 + col);
+
+                const value = board[index];
+
+                if (seen.has(value)) return false;
+
+                seen.add(value);
+              }
+            }
+          }
+        }
+
+        return true;
+      };
+
+      // ✅ WIN / LOSE
+      if (isValidSudoku(newGrid)) {
+
+        onUpdate("WIN");
+
+      } else {
+
+        onUpdate("LOSE");
+      }
+
+      return;
+    }
+
     onUpdate(newGrid.join(''), 1);
+
   }, [selectedCell, grid, onUpdate]);
 
   useEffect(() => {
+
     const handleKeyDown = (e: KeyboardEvent) => {
+
       if (selectedCell === null) return;
+
       if (e.key >= '1' && e.key <= '9') {
+
         handleInput(e.key);
-      } else if (e.key === 'Backspace' || e.key === 'Delete' || e.key === 'c' || e.key === 'C') {
+
+      } else if (
+        e.key === 'Backspace' ||
+        e.key === 'Delete' ||
+        e.key === 'c' ||
+        e.key === 'C'
+      ) {
+
         handleInput('.');
       }
     };
+
     window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+
+    return () =>
+      window.removeEventListener('keydown', handleKeyDown);
+
   }, [selectedCell, handleInput]);
 
   return (
+
     <div className="flex flex-col items-center gap-6 sm:gap-10 w-full max-w-md mx-auto">
+
       <div className="grid grid-cols-9 gap-[1px] bg-white/10 p-[1px] sm:p-[2px] rounded-xl sm:rounded-2xl overflow-hidden glass violet-glow aspect-square w-full">
+
         {grid.map((cell, i) => {
+
           const isFixed = initialData[i] !== '.';
+
           const isSelected = selectedCell === i;
+
           const row = Math.floor(i / 9);
+
           const col = i % 9;
-          
-          const isSubgridRight = (col + 1) % 3 === 0 && col !== 8;
-          const isSubgridBottom = (row + 1) % 3 === 0 && row !== 8;
+
+          const isSubgridRight =
+            (col + 1) % 3 === 0 && col !== 8;
+
+          const isSubgridBottom =
+            (row + 1) % 3 === 0 && row !== 8;
 
           return (
+
             <div
               key={i}
               onClick={() => handleCellClick(i)}
               className={cn(
                 "flex items-center justify-center bg-transparent text-[12px] sm:text-xl font-headline cursor-pointer transition-all hover:bg-white/5 relative select-none h-full",
-                isFixed ? "text-violet-400 font-bold" : "text-foreground",
-                isSelected && "bg-primary/30 ring-1 sm:ring-2 ring-primary/50 inset-0 z-10",
-                isSubgridRight && "border-r-[1px] sm:border-r-[2px] border-r-white/30",
-                isSubgridBottom && "border-b-[1px] sm:border-b-[2px] border-b-white/30"
+                isFixed
+                  ? "text-violet-400 font-bold"
+                  : "text-foreground",
+                isSelected &&
+                  "bg-primary/30 ring-1 sm:ring-2 ring-primary/50 inset-0 z-10",
+                isSubgridRight &&
+                  "border-r-[1px] sm:border-r-[2px] border-r-white/30",
+                isSubgridBottom &&
+                  "border-b-[1px] sm:border-b-[2px] border-b-white/30"
               )}
             >
               {cell === '.' ? '' : cell}
             </div>
           );
         })}
+
       </div>
 
       <div className="grid grid-cols-5 gap-2 sm:gap-3 w-full">
+
         {[1, 2, 3, 4, 5, 6, 7, 8, 9, 'C'].map((val) => (
+
           <Button
             key={val}
             variant="outline"
             className={cn(
               "h-10 sm:h-14 text-lg sm:text-2xl font-headline font-bold glass border-white/10 hover:bg-primary/20 hover:text-white transition-all active:scale-90 rounded-xl",
-              val === 'C' && "text-destructive hover:bg-destructive/20 border-destructive/20"
+              val === 'C' &&
+                "text-destructive hover:bg-destructive/20 border-destructive/20"
             )}
-            onClick={() => handleInput(val === 'C' ? '.' : val.toString())}
+            onClick={() =>
+              handleInput(val === 'C' ? '.' : val.toString())
+            }
           >
             {val}
           </Button>
+
         ))}
+
       </div>
+
     </div>
   );
 }
