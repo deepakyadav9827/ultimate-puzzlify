@@ -258,10 +258,9 @@ export default function UltimatePuzzlify() {
               <Image
                 src="/glogo.png"
                 alt="Ultimate Puzzlify Logo"
-                width={90}
-                height={90}
-                priority
-                className="object-contain scale-125 drop-shadow-[0_0_18px_rgba(168,85,247,0.7)]"
+                width={70}
+                height={70}
+                className="object-contain rounded-2xl"
               />
            </div>
             <div>
