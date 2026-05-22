@@ -2,17 +2,21 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
-import Image from 'next/image';
-import { generateUniquePuzzle } from '@/ai/flows/generate-unique-puzzle';
+// import { generateUniquePuzzle } from '@/ai/flows/generate-unique-puzzle';
 import { SudokuBoard } from '@/components/puzzle/SudokuBoard';
 import { SlidingBoard } from '@/components/puzzle/SlidingBoard';
 import { MemoryBoard } from '@/components/puzzle/MemoryBoard';
 import { Game2048 } from '@/components/puzzle/Game2048';
 import { TicTacToeAI } from '@/components/puzzle/TicTacToeAI';
-import { HintMentor } from '@/components/puzzle/HintMentor';
+// import { HintMentor } from '@/components/puzzle/HintMentor';
 import { Button } from '@/components/ui/button';
 import { Card, CardTitle, CardDescription } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import {
+  AdMob,
+  BannerAdPosition,
+  BannerAdSize,
+} from '@capacitor-community/admob';
 import { 
   Grid3X3, 
   Layers, 
@@ -62,6 +66,35 @@ function getSlidingShuffle(size: number) {
 }
 
 export default function UltimatePuzzlify() {
+  const [showSplash, setShowSplash] = useState(true);
+
+useEffect(() => {
+  const timer = setTimeout(() => {
+    setShowSplash(false);
+  }, 2500);
+
+  return () => clearTimeout(timer);
+}, []);
+
+  useEffect(() => {
+
+  const initAds = async () => {
+
+    await AdMob.initialize();
+
+    await AdMob.showBanner({
+      adId: 'ca-app-pub-4087959609582329/8475889410',
+      adSize: BannerAdSize.BANNER,
+      position: BannerAdPosition.BOTTOM_CENTER,
+      isTesting: true
+    });
+
+  };
+
+  initAds();
+
+}, []);
+
   const { user } = useUser();
   const db = useFirestore();
   const [view, setView] = useState<View>('hub');
@@ -137,35 +170,44 @@ export default function UltimatePuzzlify() {
       }
 
       const needsAI = ['Sudoku', 'Sliding Puzzle', 'Memory Grid'].includes(type);
-      
-      if (needsAI) {
-        try {
-          const result = await Promise.race([
-            generateUniquePuzzle({ puzzleType: type, difficulty: pDiff }),
-            new Promise<never>((_, reject) => setTimeout(() => reject(new Error("Timeout")), 8000))
-          ]);
-          data = result.puzzleData;
-          if (type !== 'Sliding Puzzle') solution = result.solution;
-        } catch (aiError) {
-          if (type === 'Sliding Puzzle') {
-            data = getSlidingShuffle(size);
-          } else if (type === 'Memory Grid') {
-            const symbols = "🍎,🍌,🍒,🥑,⭐,🌙,☀️,☁️,🐱,🐶,🦊,🐰,🦁,🐯,🐼,🐨,🐷,🐸,🐙,🦋,🦄,🐉,🍦,🍕,🎮,🚀,🌈,💎,🍀,🔥,❄️,🎭,🎸,⚽,🛸,👻".split(',');
-            const selectedCount = (size * size) / 2;
-            const selected = symbols.sort(() => Math.random() - 0.5).slice(0, selectedCount);
-            data = [...selected, ...selected].sort(() => Math.random() - 0.5).join(',');
-            solution = "MATCHED";
-          } else {
-            const banks = [
-                "53..7....6..195....98....6.8...6...34..8.3..17...2...6.6....28....419..5....8..79",
-                ".94...13..............76..2.8..1.....32.........2...6.....8.4......6...3.7.4.9...",
-                "....7..2.8.......6.1.2.5...9.54....8.........3....85.1...3.2.8.4.......9.7..6...."
-            ];
-            data = banks[Math.floor(Math.random() * banks.length)];
-            solution = "WIN";
-          }
-        }
+
+     if (needsAI) {
+
+      if (type === 'Sliding Puzzle') {
+        data = getSlidingShuffle(size);
+
+      } else if (type === 'Memory Grid') {
+
+        const symbols =
+          "🍎,🍌,🍒,🥑,⭐,🌙,☀️,☁️,🐱,🐶,🦊,🐰,🦁,🐯,🐼,🐨,🐷,🐸,🐙,🦋,🦄,🐉,🍦,🍕,🎮,🚀,🌈,💎,🍀,🔥,❄️,🎭,🎸,⚽,🛸,👻".split(',');
+
+        const selectedCount = (size * size) / 2;
+
+        const selected =
+          symbols.sort(() => Math.random() - 0.5).slice(0, selectedCount);
+    
+        data =
+          [...selected, ...selected]
+            .sort(() => Math.random() - 0.5)
+            .join(',');
+    
+        solution = "MATCHED";
+
+      } else {
+
+        const banks = [
+          "53..7....6..195....98....6.8...6...34..8.3..17...2...6.6....28....419..5....8..79",
+    
+          ".94...13..............76..2.8..1.....32.........2...6.....8.4......6...3.7.4.9...",
+    
+          "....7..2.8.......6.1.2.5...9.54....8.........3....85.1...3.2.8.4.......9.7..6...."
+        ];
+
+        data = banks[Math.floor(Math.random() * banks.length)];
+
+        solution = "WIN";
       }
+    }
 
       const newSession: GameSession = {
         id: Math.random().toString(36).substring(7),
@@ -195,7 +237,7 @@ export default function UltimatePuzzlify() {
     }
   };
 
-  const handleUpdate = (progress: string, moveIncrement = 1) => {
+   const handleUpdate = async (progress: string, moveIncrement = 1) => {
     if (!activeSession || activeSession.isCompleted) return;
     
     if (progress === "LOSE") {
@@ -222,8 +264,16 @@ export default function UltimatePuzzlify() {
         localStorage.setItem('up-user-stats-v1', JSON.stringify(updatedStats));
         setUserStats(updatedStats);
       }
-      setShowWin(true);
-    }
+
+     await AdMob.prepareInterstitial({
+       adId: 'ca-app-pub-4087959609582329/7901174349',
+       isTesting: true
+     });
+
+     await AdMob.showInterstitial();
+
+           setShowWin(true);
+         }
 
     setActiveSession(updated);
     if (user && db) {
@@ -248,6 +298,52 @@ export default function UltimatePuzzlify() {
       ]
     }
   ];
+  
+  if (showSplash) {
+  return (
+    <div className="fixed inset-0 bg-black overflow-hidden flex items-center justify-center z-[9999]">
+
+      {/* Animated Background Glow */}
+      <div className="absolute w-[500px] h-[500px] bg-violet-600/20 rounded-full blur-3xl animate-pulse" />
+
+      {/* Rotating Ring */}
+      <div className="absolute w-72 h-72 border border-violet-500/30 rounded-full animate-spin-slow" />
+
+      {/* Main Content */}
+      <div className="relative z-10 flex flex-col items-center">
+
+        {/* Logo */}
+        <div className="w-40 h-40 rounded-[40px] glass violet-glow flex items-center justify-center animate-bounce">
+
+          <img
+            src="/newlogo.png"
+            alt="Ultimate Puzzlify"
+            className="w-32 h-32 object-contain animate-pulse"
+          />
+
+        </div>
+
+        {/* Title */}
+        <h1 className="mt-8 text-5xl font-black tracking-widest text-white animate-fade-in">
+          ULTIMATE PUZZLIFY
+        </h1>
+
+        {/* Subtitle */}
+        <p className="mt-3 text-violet-400 tracking-[0.4em] text-sm uppercase">
+          Neural Puzzle Engine
+        </p>
+
+        {/* Loading Dots */}
+        <div className="flex gap-3 mt-10">
+          <div className="w-3 h-3 bg-violet-400 rounded-full animate-bounce" />
+          <div className="w-3 h-3 bg-violet-400 rounded-full animate-bounce delay-150" />
+          <div className="w-3 h-3 bg-violet-400 rounded-full animate-bounce delay-300" />
+        </div>
+
+      </div>
+    </div>
+  );
+}
 
   if (view === 'hub') {
     return (
@@ -412,9 +508,64 @@ export default function UltimatePuzzlify() {
             <div className="font-mono text-lg sm:text-2xl text-primary font-bold">{activeSession?.moves}</div>
             <span className="game-status-label text-[9px] sm:text-[10px]">OPS</span>
           </div>
-          <Button variant="ghost" size="icon" className="glass size-10 sm:size-12 rounded-xl hover:text-violet-400 transition-colors" onClick={() => startNewGame(activeSession?.type || 'Sudoku')}>
-            <RotateCcw className="size-5" />
-          </Button>
+           <Button
+              variant="ghost"
+              size="icon"
+              className="glass size-10 sm:size-12 rounded-xl hover:text-violet-400 transition-colors"
+
+              onClick={async () => {
+
+                await AdMob.prepareRewardVideoAd({
+                  adId: 'ca-app-pub-4087959609582329/3668765387',
+                  isTesting: true
+                });
+
+                await AdMob.showRewardVideoAd();
+
+                startNewGame(activeSession?.type || 'Sudoku');
+            
+              }}
+            >
+              <RotateCcw className="size-5" />
+           </Button>
+        <Button
+         variant="ghost"
+         size="sm"
+         className="glass rounded-xl text-violet-400"
+
+         onClick={async () => {
+
+           await AdMob.prepareRewardVideoAd({
+             adId: 'ca-app-pub-4087959609582329/3668765387',
+             isTesting: true
+           });
+
+           await AdMob.showRewardVideoAd();
+
+           let hint = '';
+
+           if (activeSession?.type === 'Sudoku') {
+             hint = 'Try checking rows with most filled numbers 😄';
+           }
+
+           else if (activeSession?.type === 'Sliding Puzzle') {
+             hint = 'Move tiles closer to their original positions 🔥';
+          }
+
+           else if (activeSession?.type === 'Memory Grid') {
+             hint = 'Remember previously opened card positions 😄';
+           }
+
+           else {
+             hint = 'Think carefully and try another move 😄';
+           }
+
+           alert(hint);
+
+         }}
+       >
+         💡
+       </Button>
         </div>
       </nav>
 
@@ -465,9 +616,9 @@ export default function UltimatePuzzlify() {
         </div>
       </main>
 
-      {activeSession && !activeSession.isCompleted && !showGameOver && !showWin && (
-        <HintMentor puzzleType={activeSession.type} difficulty={activeSession.difficulty} gameState={activeSession.userProgress} />
-      )}
+      {/* {activeSession && !activeSession.isCompleted && !showGameOver && !showWin && (
+         <HintMentor puzzleType={activeSession.type} difficulty={activeSession.difficulty} gameState={activeSession.userProgress} />
+      )} */}
     </div>
   );
 }
