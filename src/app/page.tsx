@@ -80,14 +80,22 @@ useEffect(() => {
 
   const initAds = async () => {
 
-    await AdMob.initialize();
+    try {
 
-    await AdMob.showBanner({
-      adId: 'ca-app-pub-4087959609582329/8475889410',
-      adSize: BannerAdSize.BANNER,
-      position: BannerAdPosition.BOTTOM_CENTER,
-      isTesting: true
-    });
+      await AdMob.initialize();
+
+      await AdMob.showBanner({
+        adId: 'ca-app-pub-4087959609582329/8475889410',
+        adSize: BannerAdSize.BANNER,
+        position: BannerAdPosition.BOTTOM_CENTER,
+        isTesting: true
+      });
+
+    } catch (e) {
+
+      console.log('Banner ad failed');
+
+    }
 
   };
 
@@ -265,13 +273,20 @@ useEffect(() => {
         setUserStats(updatedStats);
       }
 
-     await AdMob.prepareInterstitial({
-       adId: 'ca-app-pub-4087959609582329/7901174349',
-       isTesting: true
-     });
+     try {
 
-     await AdMob.showInterstitial();
+  await AdMob.prepareInterstitial({
+    adId: 'ca-app-pub-4087959609582329/7901174349',
+    isTesting: true
+  });
 
+  await AdMob.showInterstitial();
+
+} catch (e) {
+
+  console.log('Interstitial ad failed');
+
+}
            setShowWin(true);
          }
 
@@ -515,14 +530,22 @@ useEffect(() => {
 
               onClick={async () => {
 
-                await AdMob.prepareRewardVideoAd({
-                  adId: 'ca-app-pub-4087959609582329/3668765387',
-                  isTesting: true
-                });
+                try {
 
-                await AdMob.showRewardVideoAd();
+  await AdMob.prepareRewardVideoAd({
+    adId: 'ca-app-pub-4087959609582329/3668765387',
+    isTesting: true
+  });
 
-                startNewGame(activeSession?.type || 'Sudoku');
+  await AdMob.showRewardVideoAd();
+
+} catch (e) {
+
+  console.log('Reward ad failed');
+
+}
+
+startNewGame(activeSession?.type || 'Sudoku');
             
               }}
             >
@@ -535,12 +558,20 @@ useEffect(() => {
 
          onClick={async () => {
 
-           await AdMob.prepareRewardVideoAd({
-             adId: 'ca-app-pub-4087959609582329/3668765387',
-             isTesting: true
-           });
+           try {
 
-           await AdMob.showRewardVideoAd();
+  await AdMob.prepareRewardVideoAd({
+    adId: 'ca-app-pub-4087959609582329/3668765387',
+    isTesting: true
+  });
+
+  await AdMob.showRewardVideoAd();
+
+} catch (e) {
+
+  console.log('Hint reward ad failed');
+
+}
 
            let hint = '';
 
