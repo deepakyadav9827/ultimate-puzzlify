@@ -68,6 +68,72 @@ function getSlidingShuffle(size: number) {
 export default function UltimatePuzzlify() {
   const [showSplash, setShowSplash] = useState(true);
 
+  const [gameStartCount, setGameStartCount] = useState(0);
+  const [retryCount, setRetryCount] = useState(0);
+  const handleGameStart = async (gameId: string) => {
+
+  const newCount = gameStartCount + 1;
+
+  if (newCount >= 4) {
+
+    try {
+
+      await AdMob.prepareInterstitial({
+        adId: 'ca-app-pub-4087959609582329/7901174349',
+        isTesting: false
+      });
+
+      await AdMob.showInterstitial();
+
+    } catch (e) {
+
+      console.log('Game start ad failed');
+
+    }
+
+    setGameStartCount(0);
+
+  } else {
+
+    setGameStartCount(newCount);
+
+  }
+
+  startNewGame(gameId);
+};
+
+const handleRetry = async () => {
+
+  const newRetryCount = retryCount + 1;
+
+  if (newRetryCount >= 4) {
+
+    try {
+
+      await AdMob.prepareRewardVideoAd({
+        adId: 'ca-app-pub-4087959609582329/3668765387',
+        isTesting: false
+      });
+
+      await AdMob.showRewardVideoAd();
+
+    } catch (e) {
+
+      console.log('Retry reward ad failed');
+
+    }
+
+    setRetryCount(0);
+
+  } else {
+
+    setRetryCount(newRetryCount);
+
+  }
+
+  startNewGame(activeSession?.type || 'Sudoku');
+};
+
 useEffect(() => {
   const timer = setTimeout(() => {
     setShowSplash(false);
@@ -456,7 +522,7 @@ useEffect(() => {
                  key={g.id} 
                  onClick={() => {
                    audioRef.current?.play();
-                   startNewGame(g.id);
+                   handleGameStart(g.id)
                 }}
              className="glass-card border-none rounded-[2rem] p-8 group cursor-pointer relative transition-all active:scale-95"
             >
@@ -630,7 +696,7 @@ startNewGame(activeSession?.type || 'Sudoku');
               <p className="game-status-label text-destructive mb-12 text-lg">Neural Thread Disconnected</p>
               <div className="flex flex-col sm:flex-row gap-4">
                 <Button className="flex-1 h-16 rounded-2xl glass hover:bg-white/10 text-xl font-headline font-bold uppercase tracking-widest" onClick={() => setView('hub')}>BACK TO HUB</Button>
-                <Button className="flex-1 h-16 rounded-2xl bg-destructive hover:bg-destructive/80 text-xl font-headline font-bold uppercase tracking-widest flex items-center justify-center gap-3" onClick={() => startNewGame(activeSession?.type || 'Sudoku')}>
+                <Button className="flex-1 h-16 rounded-2xl bg-destructive hover:bg-destructive/80 text-xl font-headline font-bold uppercase tracking-widest flex items-center justify-center gap-3"onClick={handleRetry}>
                   <RefreshCw className="size-6" /> RETRY PROTOCOL
                 </Button>
               </div>
