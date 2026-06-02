@@ -33,9 +33,9 @@ export function MemoryBoard({
 } else if (difficulty === 'Medium') {
   setMovesLeft(18);
 } else if (difficulty === 'Hard') {
-  setMovesLeft(40);
+  setMovesLeft(16);
 } else if (difficulty === 'Expert') {
-  setMovesLeft(55);
+  setMovesLeft(38);
 }
 
       setExtraMovesUsed(0);
@@ -44,6 +44,10 @@ export function MemoryBoard({
       setFlipped([]);
     }
   }, [initialData, difficulty]);
+   useEffect(() => {
+  console.log("Size:", size);
+  console.log("Items:", items.length);
+}, [items, size]);
 
   const handleClick = (index: number) => {
     if (

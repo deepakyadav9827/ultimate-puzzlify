@@ -154,7 +154,7 @@ useEffect(() => {
         adId: 'ca-app-pub-4087959609582329/8475889410',
         adSize: BannerAdSize.BANNER,
         position: BannerAdPosition.BOTTOM_CENTER,
-        isTesting: true
+        isTesting: false
       });
 
     } catch (e) {
@@ -343,7 +343,7 @@ useEffect(() => {
 
   await AdMob.prepareInterstitial({
     adId: 'ca-app-pub-4087959609582329/7901174349',
-    isTesting: true
+    isTesting: false
   });
 
   await AdMob.showInterstitial();
@@ -559,16 +559,22 @@ useEffect(() => {
   }
 
   const boardSize = activeSession?.type === 'Sliding Puzzle'
-  ? (activeSession?.difficulty === 'Expert' ? 6 : activeSession?.difficulty === 'Hard' ? 4 : 3)
-  : (activeSession?.type === 'Memory Grid'
-      ? (
-          activeSession?.difficulty === 'Expert'
-            ? 6
-            : activeSession?.difficulty === 'Hard'
-            ? 4
-            : 3
-        )
-      : 0);
+  ? (
+      activeSession?.difficulty === 'Expert'
+        ? 6
+        : activeSession?.difficulty === 'Hard'
+        ? 4
+        : 3
+    )
+  : (
+      activeSession?.type === 'Memory Grid'
+        ? (
+            activeSession?.difficulty === 'Expert'
+              ? 6
+              : 4
+          )
+        : 0
+    );
       
   return (
     <div className="min-h-screen flex flex-col animate-in fade-in duration-500 bg-background overflow-x-hidden">
@@ -608,7 +614,7 @@ useEffect(() => {
 
   await AdMob.prepareRewardVideoAd({
     adId: 'ca-app-pub-4087959609582329/3668765387',
-    isTesting: true
+    isTesting: false
   });
 
   await AdMob.showRewardVideoAd();
@@ -636,7 +642,7 @@ startNewGame(activeSession?.type || 'Sudoku');
 
   await AdMob.prepareRewardVideoAd({
     adId: 'ca-app-pub-4087959609582329/3668765387',
-    isTesting: true
+    isTesting: false
   });
 
   await AdMob.showRewardVideoAd();
