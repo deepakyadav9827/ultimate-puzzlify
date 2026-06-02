@@ -3,34 +3,64 @@
 
 import React, { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { AdMob } from '@capacitor-community/admob';
 
 interface MemoryBoardProps {
   initialData: string;
   size?: number;
+  difficulty?: string;
   onUpdate: (progress: string, moves?: number) => void;
 }
 
-export function MemoryBoard({ initialData, size = 4, onUpdate }: MemoryBoardProps) {
+export function MemoryBoard({
+  initialData,
+  size = 4,
+  difficulty = 'Easy',
+  onUpdate
+}: MemoryBoardProps) {
+
   const [items, setItems] = useState<string[]>([]);
   const [flipped, setFlipped] = useState<number[]>([]);
   const [solved, setSolved] = useState<number[]>([]);
-
+  const [movesLeft, setMovesLeft] = useState(35);
+  const [extraMovesUsed, setExtraMovesUsed] = useState(0);
+  
   useEffect(() => {
     if (initialData) {
+      if (difficulty === 'Easy') {
+  setMovesLeft(20);
+} else if (difficulty === 'Medium') {
+  setMovesLeft(18);
+} else if (difficulty === 'Hard') {
+  setMovesLeft(40);
+} else if (difficulty === 'Expert') {
+  setMovesLeft(55);
+}
+
+      setExtraMovesUsed(0);
       setItems(initialData.split(','));
       setSolved([]);
       setFlipped([]);
     }
-  }, [initialData]);
+  }, [initialData, difficulty]);
 
   const handleClick = (index: number) => {
-    if (flipped.length >= 2 || flipped.includes(index) || solved.includes(index)) return;
+    if (
+  movesLeft <= 0 ||
+  flipped.length >= 2 ||
+  flipped.includes(index) ||
+  solved.includes(index)
+) return;
 
     const newFlipped = [...flipped, index];
     setFlipped(newFlipped);
 
     if (newFlipped.length === 2) {
       const [first, second] = newFlipped;
+
+      const remainingMoves = movesLeft - 1;
+       setMovesLeft(remainingMoves);       
       
       if (items[first] === items[second]) {
         const newSolved = [...solved, first, second];
@@ -43,11 +73,19 @@ export function MemoryBoard({ initialData, size = 4, onUpdate }: MemoryBoardProp
           onUpdate(`progress-${newSolved.length}`, 1);
         }
       } else {
-        setTimeout(() => {
-          setFlipped([]);
-        }, 800);
-        onUpdate(`fail-${Date.now()}`, 1);
-      }
+
+  if (remainingMoves <= 0) {
+    setFlipped([]);
+    onUpdate("FAILED", 0);
+    return;
+  }
+
+  setTimeout(() => {
+    setFlipped([]);
+  }, 800);
+
+  onUpdate(`fail-${Date.now()}`, 1);
+}
     }
   };
 
@@ -56,7 +94,13 @@ export function MemoryBoard({ initialData, size = 4, onUpdate }: MemoryBoardProp
   };
 
   return (
-    <div 
+  <>
+    <div className="mb-4 flex justify-between items-center text-primary font-bold">
+      <span>Moves Left: {movesLeft}</span>
+      <span>Extra Uses: {extraMovesUsed}/3</span>
+    </div>
+
+    <div
       className={cn(
         "grid w-full max-w-2xl mx-auto aspect-square p-1 sm:p-2",
         size === 6 ? "gap-1 sm:gap-2" : "gap-2 sm:gap-4"
@@ -66,7 +110,6 @@ export function MemoryBoard({ initialData, size = 4, onUpdate }: MemoryBoardProp
       {items.map((item, i) => {
         const isFlipped = flipped.includes(i) || solved.includes(i);
         const isMatched = solved.includes(i);
-        
         return (
           <div
             key={i}
@@ -110,7 +153,37 @@ export function MemoryBoard({ initialData, size = 4, onUpdate }: MemoryBoardProp
         .rotate-y-180 {
           transform: rotateY(180deg);
         }
-      `}</style>
-    </div>
-  );
+      `}
+      </style>
+</div>
+
+{extraMovesUsed < 3 && (
+  <Button
+  onClick={async () => {
+    try {
+
+      await AdMob.prepareRewardVideoAd({
+        adId: 'ca-app-pub-4087959609582329/3668765387',
+        isTesting: false
+      });
+
+      await AdMob.showRewardVideoAd();
+
+      setMovesLeft(prev => prev + 4);
+      setExtraMovesUsed(prev => prev + 1);
+
+    } catch (e) {
+
+      console.log('Extra moves reward ad failed');
+
+    }
+  }}
+  className="mt-4 w-full"
+>
+  🎥 +4 MOVES
+</Button>
+)}
+
+</>
+);
 }

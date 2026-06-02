@@ -558,10 +558,18 @@ useEffect(() => {
     );
   }
 
-  const boardSize = activeSession?.type === 'Sliding Puzzle' 
-    ? (activeSession?.difficulty === 'Expert' ? 6 : activeSession?.difficulty === 'Hard' ? 4 : 3)
-    : (activeSession?.type === 'Memory Grid' ? (activeSession?.difficulty === 'Expert' ? 6 : 4) : 0);
-
+  const boardSize = activeSession?.type === 'Sliding Puzzle'
+  ? (activeSession?.difficulty === 'Expert' ? 6 : activeSession?.difficulty === 'Hard' ? 4 : 3)
+  : (activeSession?.type === 'Memory Grid'
+      ? (
+          activeSession?.difficulty === 'Expert'
+            ? 6
+            : activeSession?.difficulty === 'Hard'
+            ? 4
+            : 3
+        )
+      : 0);
+      
   return (
     <div className="min-h-screen flex flex-col animate-in fade-in duration-500 bg-background overflow-x-hidden">
       <nav className="glass sticky top-0 z-50 px-4 sm:px-8 py-4 flex items-center justify-between backdrop-blur-2xl border-b border-white/5">
@@ -706,8 +714,20 @@ startNewGame(activeSession?.type || 'Sudoku');
 
         <div className="w-full max-w-4xl glass p-4 sm:p-12 rounded-[2rem] sm:rounded-[3rem] shadow-2xl relative overflow-auto max-h-[calc(100vh-140px)] scrollbar-hide">
           {activeSession && activeSession.type === 'Sudoku' && <SudokuBoard key={activeSession.id} initialData={activeSession.data} userProgress={activeSession.userProgress} onUpdate={handleUpdate} />}
-          {activeSession && activeSession.type === 'Sliding Puzzle' && <SlidingBoard key={activeSession.id} initialData={activeSession.data} size={boardSize} onUpdate={handleUpdate} />}
-          {activeSession && activeSession.type === 'Memory Grid' && <MemoryBoard key={activeSession.id} initialData={activeSession.data} size={boardSize} onUpdate={handleUpdate} />}
+          {activeSession && activeSession.type === 'Sliding Puzzle' && <SlidingBoard
+            key={activeSession.id}
+            initialData={activeSession.data}
+            size={boardSize}
+            difficulty={activeSession.difficulty}
+            onUpdate={handleUpdate}
+          />}
+          {activeSession && activeSession.type === 'Memory Grid' && <MemoryBoard
+            key={activeSession.id}
+            initialData={activeSession.data}
+            size={boardSize}
+            difficulty={activeSession.difficulty}
+            onUpdate={handleUpdate}
+          />}
           {activeSession && activeSession.type === '2048' && <Game2048 key={activeSession.id} onUpdate={handleUpdate} />}
           {activeSession && activeSession.type === 'TicTacToeAI' && <TicTacToeAI key={activeSession.id} onUpdate={handleUpdate} />}
         </div>
