@@ -7,7 +7,7 @@ import { SudokuBoard } from '@/components/puzzle/SudokuBoard';
 import { SlidingBoard } from '@/components/puzzle/SlidingBoard';
 import { MemoryBoard } from '@/components/puzzle/MemoryBoard';
 import { Game2048 } from '@/components/puzzle/Game2048';
-import { TicTacToeAI } from '@/components/puzzle/TicTacToeAI';
+import { TicTacToeAI } from '@/components/puzzle/TicTacToe';
 // import { HintMentor } from '@/components/puzzle/HintMentor';
 import { Button } from '@/components/ui/button';
 import { Card, CardTitle, CardDescription } from '@/components/ui/card';
@@ -357,9 +357,13 @@ useEffect(() => {
          }
 
     setActiveSession(updated);
-    if (user && db) {
-      saveSession(db, user.uid, updated);
-    }
+    if (isNowCompleted) {
+  setActiveSession(updated);
+
+  if (user && db) {
+    saveSession(db, user.uid, updated);
+  }
+}
   };
 
   const categories = [

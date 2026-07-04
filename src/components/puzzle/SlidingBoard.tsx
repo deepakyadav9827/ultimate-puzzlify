@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
 import { AdMob } from '@capacitor-community/admob';
@@ -21,6 +21,8 @@ export function SlidingBoard({
   const [tiles, setTiles] = useState<number[]>([]);
   const [timeLeft, setTimeLeft] = useState(180);
   const [extraTimeUsed, setExtraTimeUsed] = useState(0);
+  const [gameOver, setGameOver] = useState(false);
+  const endTimeRef = useRef(0);
 
   // Parse initial tile data
   useEffect(() => {
@@ -31,35 +33,48 @@ export function SlidingBoard({
   }, [initialData]);
 
   // Reset timer when size or puzzle changes
-  useEffect(() => {
-     if (difficulty === 'Easy') {
-  setTimeLeft(180);
-} else if (difficulty === 'Medium') {
-  setTimeLeft(150);
-} else if (difficulty === 'Hard') {
-  setTimeLeft(180);
-} else if (difficulty === 'Expert') {
-  setTimeLeft(420);
-}
+ useEffect(() => {
+  let seconds = 180;
 
-    setExtraTimeUsed(0);
-  }, [initialData, difficulty]);
+  if (difficulty === 'Easy') {
+    seconds = 180;
+  } else if (difficulty === 'Medium') {
+    seconds = 150;
+  } else if (difficulty === 'Hard') {
+    seconds = 180;
+  } else if (difficulty === 'Expert') {
+    seconds = 420;
+  }
 
-  // Countdown timer
-  const handleUpdate = useCallback(onUpdate, [onUpdate]);
+  setTimeLeft(seconds);
+
+  endTimeRef.current = Date.now() + seconds * 1000;
+
+  setExtraTimeUsed(0);
+  setGameOver(false);
+
+}, [initialData, difficulty]);
+
   useEffect(() => {
-    if (timeLeft <= 0) {
-      handleUpdate('FAILED');
-      return;
+  if (gameOver) return;
+
+  const interval = setInterval(() => {
+    const remaining = Math.max(
+      0,
+      Math.ceil((endTimeRef.current - Date.now()) / 1000)
+    );
+
+    setTimeLeft(remaining);
+
+    if (remaining <= 0) {
+      clearInterval(interval);
+      setGameOver(true);
+      onUpdate("FAILED");
     }
+  }, 250);
 
-    const timer = setTimeout(() => {
-  setTimeLeft(prev => prev - 1);
-}, 1000);
-
-return () => clearTimeout(timer);
-
-  }, [timeLeft, handleUpdate]);
+  return () => clearInterval(interval);
+}, [gameOver, onUpdate]);
 
   const moveTile = (index: number) => {
     if (timeLeft <= 0) return;
@@ -75,11 +90,28 @@ return () => clearTimeout(timer);
       (Math.abs(col - emptyCol) === 1 && row === emptyRow);
 
     if (isAdjacent) {
-      const newTiles = [...tiles];
-      [newTiles[index], newTiles[emptyIndex]] = [newTiles[emptyIndex], newTiles[index]];
-      setTiles(newTiles);
-      onUpdate(newTiles.join(','));
+
+  const newTiles = [...tiles];
+
+  [newTiles[index], newTiles[emptyIndex]] =
+    [newTiles[emptyIndex], newTiles[index]];
+
+  setTiles(newTiles);
+
+  const solved = newTiles.every((tile, index) => {
+    if (index === newTiles.length - 1) {
+      return tile === 0;
     }
+
+    return tile === index + 1;
+  });
+
+  if (solved) {
+  setGameOver(true);
+  setTimeLeft(0); // optional
+  onUpdate("WIN");
+}
+}
   };
 
   const gridStyle = {
@@ -121,7 +153,7 @@ return () => clearTimeout(timer);
       </div>
 
       {/* +30 sec button */}
-      {extraTimeUsed < 3 && (
+      {!gameOver && extraTimeUsed < 3 && (
         <Button
   onClick={async () => {
     try {
@@ -133,8 +165,16 @@ return () => clearTimeout(timer);
 
       await AdMob.showRewardVideoAd();
 
-      setTimeLeft(prev => prev + 30);
-      setExtraTimeUsed(prev => prev + 1);
+      endTimeRef.current += 30000;
+
+setTimeLeft(
+  Math.ceil((endTimeRef.current - Date.now()) / 1000)
+);
+
+setExtraTimeUsed(prev => prev + 1);
+
+
+setExtraTimeUsed(prev => prev + 1);
 
     } catch (e) {
 
