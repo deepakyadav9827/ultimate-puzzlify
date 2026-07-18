@@ -99,15 +99,19 @@ export function generateSolvedBoard(): number[][] {
 function getCellsToRemove(difficulty: Difficulty): number {
   switch (difficulty) {
     case "Easy":
-      return 40;      // ~41 clues
+      return 30; // 51 clues (Very Easy)
+
     case "Medium":
-      return 46;      // ~35 clues
+      return 40; // 41 clues (Normal)
+
     case "Hard":
-      return 52;      // ~29 clues
+      return 48; // 33 clues (Hard)
+
     case "Expert":
-      return 58;      // ~23 clues
+      return 54; // 27 clues (Expert)
+
     default:
-      return 46;
+      return 40;
   }
 }
 
