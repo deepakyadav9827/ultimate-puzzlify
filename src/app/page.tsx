@@ -3,6 +3,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 // import { generateUniquePuzzle } from '@/ai/flows/generate-unique-puzzle';
+import { generateSudoku } from "@/lib/sudoku-generator";
 import { SudokuBoard } from '@/components/puzzle/SudokuBoard';
 import { SlidingBoard } from '@/components/puzzle/SlidingBoard';
 import { MemoryBoard } from '@/components/puzzle/MemoryBoard';
@@ -17,6 +18,7 @@ import {
   BannerAdPosition,
   BannerAdSize,
 } from '@capacitor-community/admob';
+import { App } from '@capacitor/app';
 import { 
   Grid3X3, 
   Layers, 
@@ -184,25 +186,52 @@ useEffect(() => {
 
   useEffect(() => {
   audioRef.current = new Audio('/music/theme.mp3');
-
   audioRef.current.loop = true;
-
   audioRef.current.volume = 0.35;
 
   const startAudio = () => {
     if (!musicStarted) {
-      audioRef.current?.play();
-
+      audioRef.current?.play().catch(() => {});
       setMusicStarted(true);
     }
   };
 
   window.addEventListener('click', startAudio);
 
+  const listener = App.addListener('appStateChange', ({ isActive }) => {
+    if (!audioRef.current) return;
+
+    if (isActive) {
+      if (musicStarted) {
+        audioRef.current.play().catch(() => {});
+      }
+    } else {
+      audioRef.current.pause();
+    }
+  });
+
   return () => {
     audioRef.current?.pause();
-
     window.removeEventListener('click', startAudio);
+    listener.then(l => l.remove());
+  };
+}, [musicStarted]);
+
+  useEffect(() => {
+  const handleVisibility = () => {
+    if (!audioRef.current) return;
+
+    if (document.hidden) {
+      audioRef.current.pause();
+    } else if (musicStarted) {
+      audioRef.current.play().catch(() => {});
+    }
+  };
+
+  document.addEventListener("visibilitychange", handleVisibility);
+
+  return () => {
+    document.removeEventListener("visibilitychange", handleVisibility);
   };
 }, [musicStarted]);
 
@@ -269,17 +298,10 @@ useEffect(() => {
 
       } else {
 
-        const banks = [
-          "53..7....6..195....98....6.8...6...34..8.3..17...2...6.6....28....419..5....8..79",
-    
-          ".94...13..............76..2.8..1.....32.........2...6.....8.4......6...3.7.4.9...",
-    
-          "....7..2.8.......6.1.2.5...9.54....8.........3....85.1...3.2.8.4.......9.7..6...."
-        ];
+        const generated = generateSudoku(pDiff as "Easy" | "Medium" | "Hard" | "Expert");
 
-        data = banks[Math.floor(Math.random() * banks.length)];
-
-        solution = "WIN";
+         data = generated.puzzle;
+         solution = generated.solution;
       }
     }
 
@@ -495,10 +517,10 @@ useEffect(() => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent className="glass border-white/10">
-                  <SelectItem value="Easy" className="font-headline text-lg">Novice</SelectItem>
-                  <SelectItem value="Medium" className="font-headline text-lg">Adept</SelectItem>
-                  <SelectItem value="Hard" className="font-headline text-lg">Expert (4x4 Matrix)</SelectItem>
-                  <SelectItem value="Expert" className="font-headline text-lg">Grandmaster (6x6 Matrix)</SelectItem>
+                  <SelectItem value="Easy">Easy</SelectItem>
+                  <SelectItem value="Medium">Normal</SelectItem>
+                  <SelectItem value="Hard">Hard</SelectItem>
+                  <SelectItem value="Expert">Expert</SelectItem>
                 </SelectContent>
               </Select>
             </div>
