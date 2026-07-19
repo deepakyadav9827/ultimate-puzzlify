@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { AdMob } from '@capacitor-community/admob';
+import { AdManager } from "@/lib/ad-manager";
 
 interface SlidingBoardProps {
   initialData: string;
@@ -158,21 +158,13 @@ export function SlidingBoard({
   onClick={async () => {
     try {
 
-      await AdMob.prepareRewardVideoAd({
-        adId: 'ca-app-pub-4087959609582329/3668765387',
-        isTesting: false
-      });
-
-      await AdMob.showRewardVideoAd();
+      await AdManager.showReward();
 
       endTimeRef.current += 30000;
 
 setTimeLeft(
   Math.ceil((endTimeRef.current - Date.now()) / 1000)
 );
-
-setExtraTimeUsed(prev => prev + 1);
-
 
 setExtraTimeUsed(prev => prev + 1);
 

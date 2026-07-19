@@ -4,7 +4,7 @@
 import React, { useState, useEffect } from 'react';
 import { cn } from '@/lib/utils';
 import { Button } from '@/components/ui/button';
-import { AdMob } from '@capacitor-community/admob';
+import { AdManager } from "@/lib/ad-manager";
 
 interface MemoryBoardProps {
   initialData: string;
@@ -166,13 +166,8 @@ export function MemoryBoard({
   onClick={async () => {
     try {
 
-      await AdMob.prepareRewardVideoAd({
-        adId: 'ca-app-pub-4087959609582329/3668765387',
-        isTesting: false
-      });
-
-      await AdMob.showRewardVideoAd();
-
+      await AdManager.showReward();
+      
       setMovesLeft(prev => prev + 4);
       setExtraMovesUsed(prev => prev + 1);
 

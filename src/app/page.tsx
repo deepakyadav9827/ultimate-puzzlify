@@ -18,6 +18,7 @@ import {
   BannerAdPosition,
   BannerAdSize,
 } from '@capacitor-community/admob';
+import { AdManager } from "@/lib/ad-manager";
 import { App } from '@capacitor/app';
 import { 
   Grid3X3, 
@@ -80,12 +81,7 @@ export default function UltimatePuzzlify() {
 
     try {
 
-      await AdMob.prepareInterstitial({
-        adId: 'ca-app-pub-4087959609582329/7901174349',
-        isTesting: false
-      });
-
-      await AdMob.showInterstitial();
+    await AdManager.showInterstitial();
 
     } catch (e) {
 
@@ -112,12 +108,7 @@ const handleRetry = async () => {
 
     try {
 
-      await AdMob.prepareRewardVideoAd({
-        adId: 'ca-app-pub-4087959609582329/3668765387',
-        isTesting: false
-      });
-
-      await AdMob.showRewardVideoAd();
+      await AdManager.showReward();
 
     } catch (e) {
 
@@ -150,7 +141,7 @@ useEffect(() => {
 
     try {
 
-      await AdMob.initialize();
+      await AdManager.initialize();
 
       await AdMob.showBanner({
         adId: 'ca-app-pub-4087959609582329/8475889410',
@@ -363,12 +354,7 @@ useEffect(() => {
 
      try {
 
-  await AdMob.prepareInterstitial({
-    adId: 'ca-app-pub-4087959609582329/7901174349',
-    isTesting: false
-  });
-
-  await AdMob.showInterstitial();
+ await AdManager.showInterstitial();
 
 } catch (e) {
 
@@ -638,12 +624,7 @@ useEffect(() => {
 
                 try {
 
-  await AdMob.prepareRewardVideoAd({
-    adId: 'ca-app-pub-4087959609582329/3668765387',
-    isTesting: false
-  });
-
-  await AdMob.showRewardVideoAd();
+  await AdManager.showReward();
 
 } catch (e) {
 
@@ -666,12 +647,7 @@ startNewGame(activeSession?.type || 'Sudoku');
 
            try {
 
-  await AdMob.prepareRewardVideoAd({
-    adId: 'ca-app-pub-4087959609582329/3668765387',
-    isTesting: false
-  });
-
-  await AdMob.showRewardVideoAd();
+  await AdManager.showReward();
 
 } catch (e) {
 
